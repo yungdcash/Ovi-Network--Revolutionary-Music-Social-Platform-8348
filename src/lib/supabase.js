@@ -1,7 +1,7 @@
 import { createClient } from '@supabase/supabase-js'
 
-const SUPABASE_URL = 'https://shzxrfjovxshkyoajlob.supabase.co'
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNoenhyZmpvdnhzaGt5b2FqbG9iIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg2MTA4MjUsImV4cCI6MjA3NDE4NjgyNX0.u0rEYIEv9mJwXsRwsrXyK8x6PRTTpZjpCbFJ6qFW0vo'
+const SUPABASE_URL = 'https://zkpdnbwzvrkguvjjrruk.supabase.co'
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InprcGRuYnd6dnJrZ3V2ampycnVrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg2NDczMTYsImV4cCI6MjA3NDIyMzMxNn0.QW3cWmBDx0u6HUKd19PQmHgAKClyLx9rpznAUCqcs4M'
 
 if(SUPABASE_URL === 'https://<PROJECT-ID>.supabase.co' || SUPABASE_ANON_KEY === '<ANON_KEY>') {
   throw new Error('Missing Supabase variables');
@@ -50,25 +50,25 @@ export const emailVerificationService = {
       // In a real implementation, this would integrate with an email service
       // For now, we'll simulate the email sending and log the code
       console.log(`
-        =====================================
-        📧 EMAIL VERIFICATION CODE
-        =====================================
-        To: ${email}
-        Subject: Verify Your Ovi Network Account
-        
-        Hi ${userName},
-        
-        Your verification code is: ${code}
-        
-        This code will expire in 15 minutes.
-        
-        Welcome to Ovi Network!
-        =====================================
+=====================================
+📧 EMAIL VERIFICATION CODE
+=====================================
+To: ${email}
+Subject: Verify Your Ovi Network Account
+
+Hi ${userName},
+
+Your verification code is: ${code}
+
+This code will expire in 15 minutes.
+
+Welcome to Ovi Network!
+=====================================
       `);
 
       // Simulate email sending delay
       await new Promise(resolve => setTimeout(resolve, 1000));
-      
+
       return { success: true, message: 'Verification email sent successfully' };
     } catch (error) {
       console.error('Error sending verification email:', error);
@@ -96,33 +96,27 @@ export const emailVerificationService = {
         // Update attempts count for existing codes
         await supabase
           .from('email_verification_codes_ev2024')
-          .update({ 
+          .update({
             attempts: supabase.raw('attempts + 1'),
             updated_at: new Date().toISOString()
           })
           .eq('email', email.toLowerCase())
           .eq('is_used', false);
 
-        return { 
-          success: false, 
-          error: 'Invalid or expired verification code' 
-        };
+        return { success: false, error: 'Invalid or expired verification code' };
       }
 
       const verificationRecord = verificationData[0];
 
       // Check if max attempts exceeded
       if (verificationRecord.attempts >= verificationRecord.max_attempts) {
-        return { 
-          success: false, 
-          error: 'Maximum verification attempts exceeded. Please request a new code.' 
-        };
+        return { success: false, error: 'Maximum verification attempts exceeded. Please request a new code.' };
       }
 
       // Mark code as used
       const { error: updateError } = await supabase
         .from('email_verification_codes_ev2024')
-        .update({ 
+        .update({
           is_used: true,
           updated_at: new Date().toISOString()
         })
@@ -180,14 +174,13 @@ export const emailVerificationService = {
       // Generate and store new code
       const newCode = emailVerificationService.generateVerificationCode();
       const storeResult = await emailVerificationService.storeVerificationCode(email, newCode);
-      
+
       if (!storeResult.success) {
         return storeResult;
       }
 
       // Send new verification email
       const emailResult = await emailVerificationService.sendVerificationEmail(email, newCode, 'User');
-      
       return emailResult;
     } catch (error) {
       console.error('Error requesting new code:', error);

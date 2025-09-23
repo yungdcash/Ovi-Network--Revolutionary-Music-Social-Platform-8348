@@ -92,7 +92,7 @@ export const AuthProvider = ({ children }) => {
       setUser(userData);
       setIsAuthenticated(true);
       localStorage.setItem('ovi-user', JSON.stringify(userData));
-      
+
       // Log the login action
       await logUserAction('login', {
         login_method: userData.isReturningUser ? 'sign_in' : 'registration',
@@ -100,7 +100,7 @@ export const AuthProvider = ({ children }) => {
         theme_selected: userData.theme,
         registration_step: userData.isReturningUser ? null : 'completed'
       });
-      
+
       return true;
     } catch (error) {
       console.error('Error during login:', error);
@@ -117,14 +117,14 @@ export const AuthProvider = ({ children }) => {
           logout_method: 'manual'
         });
       }
-      
+
       setUser(null);
       setIsAuthenticated(false);
       localStorage.removeItem('ovi-user');
-      
+
       // Generate new session ID for next session
       setSessionId(`session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`);
-      
+
       return true;
     } catch (error) {
       console.error('Error during logout:', error);
@@ -141,7 +141,7 @@ export const AuthProvider = ({ children }) => {
       const newUserData = { ...user, ...updatedUserData };
       setUser(newUserData);
       localStorage.setItem('ovi-user', JSON.stringify(newUserData));
-      
+
       // Log the profile update action
       await logUserAction('profile_updated', {
         updated_fields: Object.keys(updatedUserData),
@@ -151,7 +151,7 @@ export const AuthProvider = ({ children }) => {
         }, {}),
         new_values: updatedUserData
       });
-      
+
       return true;
     } catch (error) {
       console.error('Error updating user:', error);
