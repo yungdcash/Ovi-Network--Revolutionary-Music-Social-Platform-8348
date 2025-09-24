@@ -10,11 +10,14 @@ import FeedPage from './components/Feed/FeedPage';
 import TrendingPage from './components/Trending/TrendingPage';
 import ProfilePage from './components/Profile/ProfilePage';
 import SettingsPage from './components/Settings/SettingsPage';
+import MusicPage from './components/Music/MusicPage';
+import BeatsPage from './components/Beats/BeatsPage';
+import DiscoverPage from './components/Discover/DiscoverPage';
 import FloatingElements from './components/3D/FloatingElements';
 import './App.css';
 
 const AppContent = () => {
-  const { isFirstTime, isAuthenticated } = useAuth();
+  const { isFirstTime, isAuthenticated, user } = useAuth();
   const { theme } = useTheme();
   const { isMobile } = useResponsive();
   const [activeTab, setActiveTab] = useState('home');
@@ -29,6 +32,12 @@ const AppContent = () => {
         return <FeedPage />;
       case 'trending':
         return <TrendingPage />;
+      case 'music':
+        return user?.userType === 'artist' ? <MusicPage /> : <FeedPage />;
+      case 'beats':
+        return user?.userType === 'producer' ? <BeatsPage /> : <FeedPage />;
+      case 'discover':
+        return user?.userType === 'fan' ? <DiscoverPage /> : <FeedPage />;
       case 'profile':
         return <ProfilePage />;
       case 'settings':
@@ -39,40 +48,48 @@ const AppContent = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-dark-900 via-smokey-900 to-dark-800 relative overflow-hidden">
+    <div className="h-screen bg-gradient-to-br from-dark-900 via-smokey-900 to-dark-800 relative overflow-hidden">
       <FloatingElements className="opacity-20" />
       
-      <div className="relative z-10 min-h-screen flex">
-        {/* Desktop Navigation */}
+      <div className="relative z-10 h-full flex">
+        {/* Desktop Navigation - Fixed */}
         {!isMobile && (
-          <Navigation 
-            activeTab={activeTab} 
-            setActiveTab={setActiveTab}
-            isMobile={false}
-          />
+          <div className="w-64 flex-shrink-0">
+            <Navigation 
+              activeTab={activeTab} 
+              setActiveTab={setActiveTab}
+              isMobile={false}
+            />
+          </div>
         )}
 
-        {/* Main Content */}
-        <div className="flex-1 flex flex-col">
-          <Header isMobile={isMobile} />
+        {/* Main Content Area */}
+        <div className="flex-1 flex flex-col h-full">
+          {/* Header - Fixed */}
+          <div className="flex-shrink-0">
+            <Header isMobile={isMobile} />
+          </div>
           
-          <main className="flex-1 overflow-y-auto">
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={activeTab}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
-                transition={{ duration: 0.3 }}
-                className="min-h-full"
-              >
-                {renderPage()}
-              </motion.div>
-            </AnimatePresence>
-          </main>
+          {/* Scrollable Content Area */}
+          <div className="flex-1 overflow-hidden">
+            <div className="h-full overflow-y-auto scrollbar-thin scrollbar-thumb-smokey-600 scrollbar-track-smokey-800">
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={activeTab}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -20 }}
+                  transition={{ duration: 0.3 }}
+                  className="min-h-full"
+                >
+                  {renderPage()}
+                </motion.div>
+              </AnimatePresence>
+            </div>
+          </div>
         </div>
 
-        {/* Mobile Navigation */}
+        {/* Mobile Navigation - Fixed */}
         {isMobile && (
           <Navigation 
             activeTab={activeTab} 
