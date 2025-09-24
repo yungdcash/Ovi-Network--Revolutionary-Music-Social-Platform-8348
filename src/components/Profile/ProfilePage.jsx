@@ -12,11 +12,15 @@ const ProfilePage = () => {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState('tracks');
 
+  // Check if current user is an artist (only artists should see earnings/dollar signs)
+  const isArtist = user?.userType === 'artist';
+
+  // Stats array - conditionally include earnings for artists only
   const stats = [
     { label: 'Followers', value: '12.5K', icon: FiUsers },
     { label: 'Total Streams', value: '2.8M', icon: FiPlay },
     { label: 'Tracks', value: '47', icon: FiMusic },
-    { label: 'Earnings', value: '$8,429', icon: FiDollarSign }
+    ...(isArtist ? [{ label: 'Earnings', value: '$8,429', icon: FiDollarSign }] : [])
   ];
 
   const tracks = [
@@ -108,7 +112,7 @@ const ProfilePage = () => {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.1 }}
-        className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8"
+        className={`grid gap-4 mb-8 ${isArtist ? 'grid-cols-2 md:grid-cols-4' : 'grid-cols-3'}`}
       >
         {stats.map((stat, index) => (
           <motion.div
@@ -180,7 +184,10 @@ const ProfilePage = () => {
                   <div className="flex items-center space-x-4 mt-1 text-sm text-smokey-400">
                     <span>{track.plays} plays</span>
                     <span>{track.likes} likes</span>
-                    <span className={`text-${theme.primary} font-bold`}>{track.earnings}</span>
+                    {/* Only show earnings for artists */}
+                    {isArtist && (
+                      <span className={`text-${theme.primary} font-bold`}>{track.earnings}</span>
+                    )}
                   </div>
                 </div>
                 

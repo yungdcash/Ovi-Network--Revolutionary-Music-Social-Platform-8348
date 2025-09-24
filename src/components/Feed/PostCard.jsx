@@ -21,6 +21,9 @@ const PostCard = ({ post }) => {
   const [showBeatDetails, setShowBeatDetails] = useState(false);
   const [isBookmarked, setIsBookmarked] = useState(false);
 
+  // Check if current user is an artist (only artists should see earnings/dollar signs)
+  const isArtist = user?.userType === 'artist';
+
   const handleLike = async () => {
     const previousLikeState = isLiked;
     const newLikeState = !isLiked;
@@ -200,7 +203,8 @@ const PostCard = ({ post }) => {
         </div>
         
         <div className="flex items-center space-x-2">
-          {post.earnings && (
+          {/* Only show earnings button for artists */}
+          {post.earnings && isArtist && (
             <motion.button
               whileHover={{ scale: 1.05 }}
               onClick={() => setShowEarnings(!showEarnings)}
@@ -223,8 +227,8 @@ const PostCard = ({ post }) => {
         </div>
       </div>
 
-      {/* Earnings Display */}
-      {showEarnings && post.earnings && (
+      {/* Earnings Display - Only for artists */}
+      {showEarnings && post.earnings && isArtist && (
         <motion.div
           initial={{ opacity: 0, height: 0 }}
           animate={{ opacity: 1, height: 'auto' }}
@@ -320,7 +324,7 @@ const PostCard = ({ post }) => {
                 )}
               </div>
 
-              {/* Beat Purchase Section */}
+              {/* Beat Purchase Section - Show prices for all users but earnings only for artists */}
               {post.beatInfo && (
                 <div className="ml-4 text-right">
                   <div className="space-y-2">
