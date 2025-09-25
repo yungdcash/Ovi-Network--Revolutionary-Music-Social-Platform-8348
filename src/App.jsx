@@ -13,6 +13,7 @@ import SettingsPage from './components/Settings/SettingsPage';
 import MusicPage from './components/Music/MusicPage';
 import BeatsPage from './components/Beats/BeatsPage';
 import DiscoverPage from './components/Discover/DiscoverPage';
+import MessagingPage from './components/Messaging/MessagingPage';
 import FloatingElements from './components/3D/FloatingElements';
 import './App.css';
 
@@ -37,7 +38,9 @@ const AppContent = () => {
       case 'beats':
         return user?.userType === 'producer' ? <BeatsPage /> : <FeedPage />;
       case 'discover':
-        return user?.userType === 'fan' ? <DiscoverPage /> : <FeedPage />;
+        return <DiscoverPage />; // Available for all user roles
+      case 'messages':
+        return <MessagingPage />; // New messaging page for all user roles
       case 'profile':
         return <ProfilePage />;
       case 'settings':

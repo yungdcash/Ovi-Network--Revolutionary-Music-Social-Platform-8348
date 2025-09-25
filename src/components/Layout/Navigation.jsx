@@ -15,7 +15,7 @@ const Navigation = ({ activeTab, setActiveTab, isMobile = false }) => {
   // Base navigation items for all users
   const baseNavItems = [
     { id: 'home', icon: FiHome, label: 'Home' },
-    { id: 'search', icon: FiSearch, label: 'Search' },
+    { id: 'discover', icon: FiHeadphones, label: 'Discover' }, // Now available for all roles
     { id: 'trending', icon: FiTrendingUp, label: 'Trending' },
   ];
 
@@ -27,8 +27,6 @@ const Navigation = ({ activeTab, setActiveTab, isMobile = false }) => {
       items.push({ id: 'music', icon: FiMusic, label: 'Music' });
     } else if (user?.userType === 'producer') {
       items.push({ id: 'beats', icon: FiDisc, label: 'Beats' });
-    } else if (user?.userType === 'fan') {
-      items.push({ id: 'discover', icon: FiHeadphones, label: 'Discover' });
     }
     
     return items;
