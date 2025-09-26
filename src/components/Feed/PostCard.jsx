@@ -21,8 +21,8 @@ const PostCard = ({ post }) => {
   const [showBeatDetails, setShowBeatDetails] = useState(false);
   const [isBookmarked, setIsBookmarked] = useState(false);
 
-  // Check if current user is an artist (only artists should see earnings/dollar signs)
-  const isArtist = user?.userType === 'artist';
+  // Check if current user is an artist or producer (both should see earnings/dollar signs)
+  const canViewEarnings = user?.userType === 'artist' || user?.userType === 'producer';
 
   const handleLike = async () => {
     const previousLikeState = isLiked;
@@ -203,8 +203,8 @@ const PostCard = ({ post }) => {
         </div>
         
         <div className="flex items-center space-x-2">
-          {/* Only show earnings button for artists */}
-          {post.earnings && isArtist && (
+          {/* Show earnings button for both artists and producers, but not for fans */}
+          {post.earnings && canViewEarnings && (
             <motion.button
               whileHover={{ scale: 1.05 }}
               onClick={() => setShowEarnings(!showEarnings)}
@@ -227,8 +227,8 @@ const PostCard = ({ post }) => {
         </div>
       </div>
 
-      {/* Earnings Display - Only for artists */}
-      {showEarnings && post.earnings && isArtist && (
+      {/* Earnings Display - Only for artists and producers */}
+      {showEarnings && post.earnings && canViewEarnings && (
         <motion.div
           initial={{ opacity: 0, height: 0 }}
           animate={{ opacity: 1, height: 'auto' }}
@@ -324,7 +324,7 @@ const PostCard = ({ post }) => {
                 )}
               </div>
 
-              {/* Beat Purchase Section - Show prices for all users but earnings only for artists */}
+              {/* Beat Purchase Section - Show prices for all users but earnings only for artists and producers */}
               {post.beatInfo && (
                 <div className="ml-4 text-right">
                   <div className="space-y-2">

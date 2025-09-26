@@ -23,6 +23,26 @@ const Header = ({ isMobile = false }) => {
   const [notificationCount, setNotificationCount] = useState(3);
   const [messageCount, setMessageCount] = useState(2);
 
+  // Real-time profile picture sync state
+  const [currentProfilePicture, setCurrentProfilePicture] = useState(user?.profilePhoto);
+
+  // Listen for profile picture updates in real-time
+  useEffect(() => {
+    const handleProfilePhotoUpdate = (event) => {
+      if (event.detail?.profilePhoto) {
+        setCurrentProfilePicture(event.detail.profilePhoto);
+      }
+    };
+
+    window.addEventListener('profilePhotoUpdated', handleProfilePhotoUpdate);
+    return () => window.removeEventListener('profilePhotoUpdated', handleProfilePhotoUpdate);
+  }, []);
+
+  // Update profile picture when user changes
+  useEffect(() => {
+    setCurrentProfilePicture(user?.profilePhoto);
+  }, [user?.profilePhoto]);
+
   // Mock data for notifications and messages
   const [notifications, setNotifications] = useState([
     {
@@ -597,13 +617,23 @@ const Header = ({ isMobile = false }) => {
               </>
             )}
 
-            {/* Profile */}
+            {/* Profile with Real-time Sync */}
             <motion.div
               whileHover={{ scale: 1.05 }}
               className="flex items-center space-x-2 cursor-pointer"
             >
-              <div className={`w-8 h-8 rounded-full bg-gradient-to-r ${theme.gradient} flex items-center justify-center`}>
-                <SafeIcon icon={FiUser} className="w-4 h-4 text-white" />
+              <div className="w-8 h-8 rounded-full overflow-hidden border-2 border-smokey-600">
+                {currentProfilePicture ? (
+                  <img 
+                    src={currentProfilePicture} 
+                    alt="Profile" 
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className={`w-full h-full bg-gradient-to-r ${theme.gradient} flex items-center justify-center`}>
+                    <SafeIcon icon={FiUser} className="w-4 h-4 text-white" />
+                  </div>
+                )}
               </div>
               {!isMobile && (
                 <span className="text-white font-medium">{user?.username || 'User'}</span>

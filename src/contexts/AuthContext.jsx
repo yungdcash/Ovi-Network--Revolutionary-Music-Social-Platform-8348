@@ -1,5 +1,4 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import supabase from '../lib/supabase';
 
 const AuthContext = createContext();
 
@@ -14,6 +13,7 @@ export const useAuth = () => {
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isFirstTime, setIsFirstTime] = useState(true);
   const [sessionId, setSessionId] = useState(null);
 
   // Generate session ID on component mount
@@ -26,34 +26,59 @@ export const AuthProvider = ({ children }) => {
 
   // Load user from localStorage on mount
   useEffect(() => {
-    const savedUser = localStorage.getItem('ovi-user');
-    if (savedUser) {
-      try {
+    try {
+      const savedUser = localStorage.getItem('ovi-user');
+      const userSetup = localStorage.getItem('ovi-user-setup');
+      
+      if (savedUser) {
         const userData = JSON.parse(savedUser);
         setUser(userData);
         setIsAuthenticated(true);
-      } catch (error) {
-        console.error('Error parsing saved user data:', error);
-        localStorage.removeItem('ovi-user');
+        setIsFirstTime(false);
       }
+      
+      if (userSetup) {
+        setIsFirstTime(false);
+      }
+    } catch (error) {
+      console.error('Error parsing saved user data:', error);
+      localStorage.removeItem('ovi-user');
+      localStorage.removeItem('ovi-user-setup');
     }
   }, []);
 
+  // Listen for profile picture updates from other components
+  useEffect(() => {
+    const handleProfileUpdate = (event) => {
+      if (event.detail && event.detail.profilePhoto) {
+        setUser(prevUser => {
+          if (prevUser) {
+            const updatedUser = { ...prevUser, profilePhoto: event.detail.profilePhoto };
+            localStorage.setItem('ovi-user', JSON.stringify(updatedUser));
+            return updatedUser;
+          }
+          return prevUser;
+        });
+      }
+    };
+
+    window.addEventListener('profilePhotoUpdated', handleProfileUpdate);
+    return () => window.removeEventListener('profilePhotoUpdated', handleProfileUpdate);
+  }, []);
+
   /**
-   * Log user action to Supabase
-   * @param {string} actionType - Type of action (e.g., 'login', 'logout', 'post_created', 'profile_updated')
+   * Log user action (mock implementation for development)
+   * @param {string} actionType - Type of action
    * @param {object} actionData - Additional data related to the action
-   * @returns {Promise<boolean>} - Returns true if successful, false otherwise
+   * @returns {Promise<boolean>} - Returns true if successful
    */
   const logUserAction = async (actionType, actionData = {}) => {
     try {
-      // Don't log if user is not authenticated
       if (!user || !isAuthenticated) {
         console.warn('Cannot log action: User not authenticated');
         return false;
       }
 
-      // Prepare the action record
       const actionRecord = {
         user_id: user.email || user.username || user.id || 'anonymous',
         action_type: actionType,
@@ -64,25 +89,14 @@ export const AuthProvider = ({ children }) => {
           timestamp: new Date().toISOString()
         },
         session_id: sessionId,
-        ip_address: null, // Will be handled by Supabase/server if needed
         user_agent: navigator.userAgent
       };
 
-      // Insert the action into Supabase
-      const { data, error } = await supabase
-        .from('user_actions_7x9k2m1q8p')
-        .insert([actionRecord])
-        .select();
-
-      if (error) {
-        console.error('Error logging user action:', error);
-        return false;
-      }
-
-      console.log('User action logged successfully:', data);
+      // Mock logging - in production this would send to Supabase
+      console.log('Mock: User action logged:', actionRecord);
       return true;
     } catch (error) {
-      console.error('Unexpected error logging user action:', error);
+      console.error('Mock: Error logging user action:', error);
       return false;
     }
   };
@@ -91,7 +105,9 @@ export const AuthProvider = ({ children }) => {
     try {
       setUser(userData);
       setIsAuthenticated(true);
+      setIsFirstTime(false);
       localStorage.setItem('ovi-user', JSON.stringify(userData));
+      localStorage.setItem('ovi-user-setup', 'true');
       
       // Log the login action
       await logUserAction('login', {
@@ -120,7 +136,9 @@ export const AuthProvider = ({ children }) => {
       
       setUser(null);
       setIsAuthenticated(false);
+      setIsFirstTime(true);
       localStorage.removeItem('ovi-user');
+      localStorage.removeItem('ovi-user-setup');
       
       // Generate new session ID for next session
       setSessionId(`session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`);
@@ -131,7 +149,9 @@ export const AuthProvider = ({ children }) => {
       // Still perform logout even if logging fails
       setUser(null);
       setIsAuthenticated(false);
+      setIsFirstTime(true);
       localStorage.removeItem('ovi-user');
+      localStorage.removeItem('ovi-user-setup');
       return false;
     }
   };
@@ -141,6 +161,18 @@ export const AuthProvider = ({ children }) => {
       const newUserData = { ...user, ...updatedUserData };
       setUser(newUserData);
       localStorage.setItem('ovi-user', JSON.stringify(newUserData));
+      
+      // If profile photo was updated, dispatch event to sync across components
+      if (updatedUserData.profilePhoto) {
+        window.dispatchEvent(new CustomEvent('profilePhotoUpdated', {
+          detail: {
+            profilePhoto: updatedUserData.profilePhoto,
+            userId: newUserData.id || newUserData.email,
+            username: newUserData.username,
+            userType: newUserData.userType
+          }
+        }));
+      }
       
       // Log the profile update action
       await logUserAction('profile_updated', {
@@ -181,6 +213,7 @@ export const AuthProvider = ({ children }) => {
     <AuthContext.Provider value={{
       user,
       isAuthenticated,
+      isFirstTime,
       sessionId,
       login,
       logout,

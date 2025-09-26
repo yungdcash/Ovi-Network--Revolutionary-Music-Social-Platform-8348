@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import PostCard from './PostCard';
+import StoriesReel from './StoriesReel';
 import FloatingElements from '../3D/FloatingElements';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
@@ -228,7 +229,9 @@ const FeedPage = () => {
   const handleUpload = (type) => {
     setUploadType(type);
     setShowUploadModal(true);
-    logUserAction('upload_initiated', { upload_type: type, user_role: user?.userType });
+    if (logUserAction) {
+      logUserAction('upload_initiated', { upload_type: type, user_role: user?.userType });
+    }
   };
 
   const UploadModal = () => (
@@ -275,7 +278,7 @@ const FeedPage = () => {
                 </label>
                 <input
                   type="text"
-                  className="w-full px-4 py-3 bg-smokey-700 border border-smokey-600 rounded-lg text-white placeholder-smokey-400 focus:border-emerald-primary focus:outline-none"
+                  className={`w-full px-4 py-3 bg-smokey-700 border border-smokey-600 rounded-lg text-white placeholder-smokey-400 focus:border-${theme.primary} focus:outline-none`}
                   placeholder={`Enter ${uploadType} title...`}
                 />
               </div>
@@ -287,7 +290,7 @@ const FeedPage = () => {
                       <label className="block text-sm font-medium text-white mb-2">Price ($)</label>
                       <input
                         type="number"
-                        className="w-full px-4 py-3 bg-smokey-700 border border-smokey-600 rounded-lg text-white placeholder-smokey-400 focus:border-emerald-primary focus:outline-none"
+                        className={`w-full px-4 py-3 bg-smokey-700 border border-smokey-600 rounded-lg text-white placeholder-smokey-400 focus:border-${theme.primary} focus:outline-none`}
                         placeholder="49.99"
                       />
                     </div>
@@ -295,7 +298,7 @@ const FeedPage = () => {
                       <label className="block text-sm font-medium text-white mb-2">BPM</label>
                       <input
                         type="number"
-                        className="w-full px-4 py-3 bg-smokey-700 border border-smokey-600 rounded-lg text-white placeholder-smokey-400 focus:border-emerald-primary focus:outline-none"
+                        className={`w-full px-4 py-3 bg-smokey-700 border border-smokey-600 rounded-lg text-white placeholder-smokey-400 focus:border-${theme.primary} focus:outline-none`}
                         placeholder="140"
                       />
                     </div>
@@ -303,7 +306,7 @@ const FeedPage = () => {
                   
                   <div>
                     <label className="block text-sm font-medium text-white mb-2">Key</label>
-                    <select className="w-full px-4 py-3 bg-smokey-700 border border-smokey-600 rounded-lg text-white focus:border-emerald-primary focus:outline-none">
+                    <select className={`w-full px-4 py-3 bg-smokey-700 border border-smokey-600 rounded-lg text-white focus:border-${theme.primary} focus:outline-none`}>
                       <option value="">Select Key</option>
                       <option value="C major">C major</option>
                       <option value="A minor">A minor</option>
@@ -318,7 +321,7 @@ const FeedPage = () => {
                 <label className="block text-sm font-medium text-white mb-2">Description</label>
                 <textarea
                   rows="3"
-                  className="w-full px-4 py-3 bg-smokey-700 border border-smokey-600 rounded-lg text-white placeholder-smokey-400 focus:border-emerald-primary focus:outline-none resize-none"
+                  className={`w-full px-4 py-3 bg-smokey-700 border border-smokey-600 rounded-lg text-white placeholder-smokey-400 focus:border-${theme.primary} focus:outline-none resize-none`}
                   placeholder="Describe your creation..."
                 />
               </div>
@@ -355,7 +358,7 @@ const FeedPage = () => {
         <motion.div
           animate={{ rotate: 360 }}
           transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
-          className="w-12 h-12 border-4 border-emerald-primary border-t-transparent rounded-full"
+          className={`w-12 h-12 border-4 border-${theme.primary} border-t-transparent rounded-full`}
         />
       </div>
     );
@@ -382,10 +385,20 @@ const FeedPage = () => {
           </p>
         </motion.div>
 
+        {/* Stories Reel */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+        >
+          <StoriesReel />
+        </motion.div>
+
         {/* Upload Buttons */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
           className="flex justify-center space-x-4 mb-6"
         >
           {user?.userType === 'artist' && (
@@ -420,7 +433,7 @@ const FeedPage = () => {
               key={post.id}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.1 }}
+              transition={{ delay: 0.3 + index * 0.1 }}
             >
               <PostCard post={post} />
             </motion.div>

@@ -35,9 +35,7 @@ const BeatsPage = () => {
       downloads: 12,
       earnings: 599.88,
       uploadDate: '2024-01-15',
-      tags: ['trap', 'dark', 'melodic'],
-      isHot: true,
-      isPack: false
+      tags: ['trap', 'dark', 'melodic']
     },
     {
       id: 2,
@@ -55,9 +53,7 @@ const BeatsPage = () => {
       downloads: 23,
       earnings: 919.77,
       uploadDate: '2024-01-12',
-      tags: ['pop', 'upbeat', 'summer'],
-      isHot: false,
-      isPack: true
+      tags: ['pop', 'upbeat', 'summer']
     }
   ]);
 
@@ -174,7 +170,7 @@ const BeatsPage = () => {
                       required
                       value={formData.title}
                       onChange={(e) => setFormData({...formData, title: e.target.value})}
-                      className={`w-full px-4 py-3 bg-smokey-700 border border-smokey-600 rounded-lg text-white placeholder-smokey-400 focus:border-${theme.primary} focus:outline-none`}
+                      className="w-full px-4 py-3 bg-smokey-700 border border-smokey-600 rounded-lg text-white placeholder-smokey-400 focus:border-purple-primary focus:outline-none"
                       placeholder="Enter beat title..."
                     />
                   </div>
@@ -186,7 +182,7 @@ const BeatsPage = () => {
                         required
                         value={formData.genre}
                         onChange={(e) => setFormData({...formData, genre: e.target.value})}
-                        className={`w-full px-4 py-3 bg-smokey-700 border border-smokey-600 rounded-lg text-white focus:border-${theme.primary} focus:outline-none`}
+                        className="w-full px-4 py-3 bg-smokey-700 border border-smokey-600 rounded-lg text-white focus:border-purple-primary focus:outline-none"
                       >
                         <option value="">Select Genre</option>
                         <option value="trap">Trap</option>
@@ -208,7 +204,7 @@ const BeatsPage = () => {
                         max="200"
                         value={formData.bpm}
                         onChange={(e) => setFormData({...formData, bpm: e.target.value})}
-                        className={`w-full px-4 py-3 bg-smokey-700 border border-smokey-600 rounded-lg text-white placeholder-smokey-400 focus:border-${theme.primary} focus:outline-none`}
+                        className="w-full px-4 py-3 bg-smokey-700 border border-smokey-600 rounded-lg text-white placeholder-smokey-400 focus:border-purple-primary focus:outline-none"
                         placeholder="140"
                       />
                     </div>
@@ -220,7 +216,7 @@ const BeatsPage = () => {
                       <select
                         value={formData.key}
                         onChange={(e) => setFormData({...formData, key: e.target.value})}
-                        className={`w-full px-4 py-3 bg-smokey-700 border border-smokey-600 rounded-lg text-white focus:border-${theme.primary} focus:outline-none`}
+                        className="w-full px-4 py-3 bg-smokey-700 border border-smokey-600 rounded-lg text-white focus:border-purple-primary focus:outline-none"
                       >
                         <option value="">Select Key</option>
                         <option value="C major">C major</option>
@@ -240,7 +236,7 @@ const BeatsPage = () => {
                       <select
                         value={formData.leaseType}
                         onChange={(e) => setFormData({...formData, leaseType: e.target.value})}
-                        className={`w-full px-4 py-3 bg-smokey-700 border border-smokey-600 rounded-lg text-white focus:border-${theme.primary} focus:outline-none`}
+                        className="w-full px-4 py-3 bg-smokey-700 border border-smokey-600 rounded-lg text-white focus:border-purple-primary focus:outline-none"
                       >
                         <option value="Standard Lease">Standard Lease</option>
                         <option value="Premium Lease">Premium Lease</option>
@@ -260,7 +256,7 @@ const BeatsPage = () => {
                         step="0.01"
                         value={formData.price}
                         onChange={(e) => setFormData({...formData, price: e.target.value})}
-                        className={`w-full px-4 py-3 bg-smokey-700 border border-smokey-600 rounded-lg text-white placeholder-smokey-400 focus:border-${theme.primary} focus:outline-none`}
+                        className="w-full px-4 py-3 bg-smokey-700 border border-smokey-600 rounded-lg text-white placeholder-smokey-400 focus:border-purple-primary focus:outline-none"
                         placeholder="49.99"
                       />
                     </div>
@@ -272,7 +268,7 @@ const BeatsPage = () => {
                         step="0.01"
                         value={formData.exclusivePrice}
                         onChange={(e) => setFormData({...formData, exclusivePrice: e.target.value})}
-                        className={`w-full px-4 py-3 bg-smokey-700 border border-smokey-600 rounded-lg text-white placeholder-smokey-400 focus:border-${theme.primary} focus:outline-none`}
+                        className="w-full px-4 py-3 bg-smokey-700 border border-smokey-600 rounded-lg text-white placeholder-smokey-400 focus:border-purple-primary focus:outline-none"
                         placeholder="299.99"
                       />
                     </div>
@@ -284,7 +280,7 @@ const BeatsPage = () => {
                       type="text"
                       value={formData.tags}
                       onChange={(e) => setFormData({...formData, tags: e.target.value})}
-                      className={`w-full px-4 py-3 bg-smokey-700 border border-smokey-600 rounded-lg text-white placeholder-smokey-400 focus:border-${theme.primary} focus:outline-none`}
+                      className="w-full px-4 py-3 bg-smokey-700 border border-smokey-600 rounded-lg text-white placeholder-smokey-400 focus:border-purple-primary focus:outline-none"
                       placeholder="trap, dark, melodic (separate with commas)"
                     />
                   </div>
@@ -295,7 +291,7 @@ const BeatsPage = () => {
                       rows="3"
                       value={formData.description}
                       onChange={(e) => setFormData({...formData, description: e.target.value})}
-                      className={`w-full px-4 py-3 bg-smokey-700 border border-smokey-600 rounded-lg text-white placeholder-smokey-400 focus:border-${theme.primary} focus:outline-none resize-none`}
+                      className="w-full px-4 py-3 bg-smokey-700 border border-smokey-600 rounded-lg text-white placeholder-smokey-400 focus:border-purple-primary focus:outline-none resize-none"
                       placeholder="Describe your beat and what makes it special..."
                     />
                   </div>
@@ -304,7 +300,7 @@ const BeatsPage = () => {
                   <div
                     className={`border-2 border-dashed rounded-lg p-8 text-center transition-all ${
                       dragActive 
-                        ? `border-${theme.primary} bg-${theme.primary}/10` 
+                        ? 'border-purple-primary bg-purple-primary/10' 
                         : 'border-smokey-600 hover:border-smokey-500'
                     }`}
                     onDragEnter={handleDrag}
@@ -337,7 +333,7 @@ const BeatsPage = () => {
                       Supports MP3, WAV, FLAC (Max 100MB)
                     </p>
                     {formData.file && (
-                      <p className={`text-${theme.primary} text-sm mt-2`}>
+                      <p className="text-purple-400 text-sm mt-2">
                         Selected: {formData.file.name}
                       </p>
                     )}
@@ -348,11 +344,11 @@ const BeatsPage = () => {
                     <div className="space-y-2">
                       <div className="flex justify-between text-sm">
                         <span className="text-white">Uploading beat...</span>
-                        <span className={`text-${theme.primary}`}>{uploadProgress}%</span>
+                        <span className="text-purple-400">{uploadProgress}%</span>
                       </div>
                       <div className="w-full bg-smokey-700 rounded-full h-2">
                         <div
-                          className={`bg-gradient-to-r ${theme.gradient} h-2 rounded-full transition-all duration-300`}
+                          className="bg-gradient-to-r from-purple-500 to-pink-500 h-2 rounded-full transition-all duration-300"
                           style={{ width: `${uploadProgress}%` }}
                         />
                       </div>
@@ -372,7 +368,7 @@ const BeatsPage = () => {
                   <button
                     type="submit"
                     disabled={!formData.title || !formData.genre || !formData.bpm || !formData.price || !formData.file || isUploading}
-                    className={`flex-1 py-3 px-4 bg-gradient-to-r ${theme.gradient} text-white rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed`}
+                    className="flex-1 py-3 px-4 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {isUploading ? 'Uploading...' : 'List Beat'}
                   </button>
@@ -412,7 +408,7 @@ const BeatsPage = () => {
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
             onClick={() => setShowUploadModal(true)}
-            className={`flex items-center space-x-3 px-8 py-4 bg-gradient-to-r ${theme.gradient} text-white rounded-2xl font-medium shadow-xl`}
+            className="flex items-center space-x-3 px-8 py-4 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-2xl font-medium shadow-xl"
           >
             <SafeIcon icon={FiPlus} className="w-6 h-6" />
             <span className="text-lg">Sell New Beat</span>
@@ -473,10 +469,10 @@ const BeatsPage = () => {
             className="bg-smokey-800/50 backdrop-blur-lg rounded-2xl p-6 border border-smokey-700"
           >
             <div className="flex items-center space-x-3 mb-3">
-              <SafeIcon icon={FiDollarSign} className={`w-8 h-8 text-${theme.primary}`} />
+              <SafeIcon icon={FiDollarSign} className="w-8 h-8 text-purple-400" />
               <div>
                 <h3 className="text-white font-semibold">Total Earnings</h3>
-                <p className={`text-2xl font-bold text-${theme.primary}`}>$1,519.65</p>
+                <p className="text-2xl font-bold text-purple-400">$1,519.65</p>
               </div>
             </div>
           </motion.div>
@@ -502,27 +498,20 @@ const BeatsPage = () => {
                   <motion.button
                     whileHover={{ scale: 1.1 }}
                     whileTap={{ scale: 0.9 }}
-                    className={`w-16 h-16 rounded-full bg-gradient-to-r ${theme.gradient} flex items-center justify-center shadow-2xl`}
+                    className="w-16 h-16 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 flex items-center justify-center shadow-2xl"
                   >
                     <SafeIcon icon={FiPlay} className="w-8 h-8 text-white ml-1" />
                   </motion.button>
                 </div>
                 
                 {/* For Sale Badge */}
-                <div className={`absolute top-3 left-3 bg-gradient-to-r ${theme.gradient} text-white px-3 py-1 rounded-full text-sm font-bold`}>
+                <div className="absolute top-3 left-3 bg-gradient-to-r from-purple-500 to-pink-500 text-white px-3 py-1 rounded-full text-sm font-bold">
                   FOR SALE
                 </div>
                 
-                {/* Beat Pack Badge */}
-                {beat.isPack && (
-                  <div className={`absolute top-12 left-3 bg-${theme.primary}/20 border border-${theme.primary} text-${theme.primary} px-2 py-1 rounded-full text-xs font-bold backdrop-blur-sm`}>
-                    BEAT PACK
-                  </div>
-                )}
-                
-                {/* Hot/Trending Badge */}
-                {beat.isHot && (
-                  <div className="absolute top-3 right-3 bg-gradient-to-r from-yellow-400 to-orange-500 text-black px-2 py-1 rounded-full text-xs font-bold flex items-center space-x-1">
+                {/* Trending Badge */}
+                {beat.previews > 200 && (
+                  <div className="absolute top-3 right-3 bg-yellow-500 text-black px-2 py-1 rounded-full text-xs font-bold flex items-center space-x-1">
                     <SafeIcon icon={FiTrendingUp} className="w-3 h-3" />
                     <span>HOT</span>
                   </div>
@@ -540,7 +529,7 @@ const BeatsPage = () => {
                   {beat.tags.map((tag, i) => (
                     <span
                       key={i}
-                      className={`px-2 py-1 text-xs bg-${theme.primary}/10 border border-${theme.primary}/30 text-${theme.primary} rounded-full`}
+                      className="px-2 py-1 text-xs bg-smokey-700 text-smokey-300 rounded-full"
                     >
                       #{tag}
                     </span>
@@ -563,7 +552,7 @@ const BeatsPage = () => {
 
                 <div className="flex justify-between items-center">
                   <div>
-                    <div className={`text-${theme.primary} font-bold text-xl`}>
+                    <div className="text-purple-400 font-bold text-xl">
                       ${beat.price}
                     </div>
                     <div className="text-smokey-500 text-xs">
