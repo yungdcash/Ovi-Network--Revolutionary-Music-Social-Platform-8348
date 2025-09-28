@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { supabase } from '../lib/supabase';
 
 const AuthContext = createContext();
 
@@ -12,216 +13,211 @@ export const useAuth = () => {
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [isFirstTime, setIsFirstTime] = useState(true);
-  const [sessionId, setSessionId] = useState(null);
+  const [profile, setProfile] = useState(null);
+  const [loading, setLoading] = useState(true);
 
-  // Generate session ID on component mount
   useEffect(() => {
-    const generateSessionId = () => {
-      return `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    // Get initial session
+    const getInitialSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user) {
+        setUser(session.user);
+        await fetchUserProfile(session.user.id);
+      }
+      setLoading(false);
     };
-    setSessionId(generateSessionId());
-  }, []);
 
-  // Load user from localStorage on mount
-  useEffect(() => {
-    try {
-      const savedUser = localStorage.getItem('ovi-user');
-      const userSetup = localStorage.getItem('ovi-user-setup');
-      
-      if (savedUser) {
-        const userData = JSON.parse(savedUser);
-        setUser(userData);
-        setIsAuthenticated(true);
-        setIsFirstTime(false);
-      }
-      
-      if (userSetup) {
-        setIsFirstTime(false);
-      }
-    } catch (error) {
-      console.error('Error parsing saved user data:', error);
-      localStorage.removeItem('ovi-user');
-      localStorage.removeItem('ovi-user-setup');
-    }
-  }, []);
+    getInitialSession();
 
-  // Listen for profile picture updates from other components
-  useEffect(() => {
-    const handleProfileUpdate = (event) => {
-      if (event.detail && event.detail.profilePhoto) {
-        setUser(prevUser => {
-          if (prevUser) {
-            const updatedUser = { ...prevUser, profilePhoto: event.detail.profilePhoto };
-            localStorage.setItem('ovi-user', JSON.stringify(updatedUser));
-            return updatedUser;
-          }
-          return prevUser;
-        });
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (session?.user) {
+        setUser(session.user);
+        await fetchUserProfile(session.user.id);
+      } else {
+        setUser(null);
+        setProfile(null);
+      }
+      setLoading(false);
+    });
+
+    // Listen for profile photo updates
+    const handleProfilePhotoUpdate = (event) => {
+      if (event.detail?.profilePhoto && profile) {
+        setProfile(prev => ({
+          ...prev,
+          profile_photo: event.detail.profilePhoto
+        }));
       }
     };
 
-    window.addEventListener('profilePhotoUpdated', handleProfileUpdate);
-    return () => window.removeEventListener('profilePhotoUpdated', handleProfileUpdate);
-  }, []);
+    window.addEventListener('profilePhotoUpdated', handleProfilePhotoUpdate);
 
-  /**
-   * Log user action (mock implementation for development)
-   * @param {string} actionType - Type of action
-   * @param {object} actionData - Additional data related to the action
-   * @returns {Promise<boolean>} - Returns true if successful
-   */
-  const logUserAction = async (actionType, actionData = {}) => {
+    return () => {
+      subscription.unsubscribe();
+      window.removeEventListener('profilePhotoUpdated', handleProfilePhotoUpdate);
+    };
+  }, [profile]);
+
+  const fetchUserProfile = async (userId) => {
     try {
-      if (!user || !isAuthenticated) {
-        console.warn('Cannot log action: User not authenticated');
-        return false;
+      const { data, error } = await supabase
+        .from('user_profiles_ovi2024')
+        .select('*')
+        .eq('user_id', userId)
+        .single();
+
+      if (error && error.code !== 'PGRST116') {
+        console.error('Error fetching profile:', error);
+        return;
       }
 
-      const actionRecord = {
-        user_id: user.email || user.username || user.id || 'anonymous',
-        action_type: actionType,
-        action_data: {
-          ...actionData,
-          user_type: user.userType,
-          theme: user.theme,
-          timestamp: new Date().toISOString()
-        },
-        session_id: sessionId,
-        user_agent: navigator.userAgent
-      };
-
-      // Mock logging - in production this would send to Supabase
-      console.log('Mock: User action logged:', actionRecord);
-      return true;
+      if (data) {
+        setProfile(data);
+      }
     } catch (error) {
-      console.error('Mock: Error logging user action:', error);
-      return false;
+      console.error('Error fetching user profile:', error);
     }
   };
 
   const login = async (userData) => {
     try {
-      setUser(userData);
-      setIsAuthenticated(true);
-      setIsFirstTime(false);
-      localStorage.setItem('ovi-user', JSON.stringify(userData));
-      localStorage.setItem('ovi-user-setup', 'true');
-      
-      // Log the login action
-      await logUserAction('login', {
-        login_method: userData.isReturningUser ? 'sign_in' : 'registration',
-        user_type: userData.userType,
-        theme_selected: userData.theme,
-        registration_step: userData.isReturningUser ? null : 'completed'
-      });
-      
-      return true;
-    } catch (error) {
-      console.error('Error during login:', error);
-      return false;
-    }
-  };
-
-  const logout = async () => {
-    try {
-      // Log the logout action before clearing user data
-      if (user && isAuthenticated) {
-        await logUserAction('logout', {
-          session_duration: sessionId ? `session_${sessionId}` : 'unknown',
-          logout_method: 'manual'
-        });
-      }
-      
-      setUser(null);
-      setIsAuthenticated(false);
-      setIsFirstTime(true);
-      localStorage.removeItem('ovi-user');
-      localStorage.removeItem('ovi-user-setup');
-      
-      // Generate new session ID for next session
-      setSessionId(`session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`);
-      
-      return true;
-    } catch (error) {
-      console.error('Error during logout:', error);
-      // Still perform logout even if logging fails
-      setUser(null);
-      setIsAuthenticated(false);
-      setIsFirstTime(true);
-      localStorage.removeItem('ovi-user');
-      localStorage.removeItem('ovi-user-setup');
-      return false;
-    }
-  };
-
-  const updateUser = async (updatedUserData) => {
-    try {
-      const newUserData = { ...user, ...updatedUserData };
-      setUser(newUserData);
-      localStorage.setItem('ovi-user', JSON.stringify(newUserData));
-      
-      // If profile photo was updated, dispatch event to sync across components
-      if (updatedUserData.profilePhoto) {
-        window.dispatchEvent(new CustomEvent('profilePhotoUpdated', {
-          detail: {
-            profilePhoto: updatedUserData.profilePhoto,
-            userId: newUserData.id || newUserData.email,
-            username: newUserData.username,
-            userType: newUserData.userType
+      // Sign up with Supabase Auth
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email: userData.email,
+        password: userData.password || 'tempPassword123!',
+        options: {
+          data: {
+            username: userData.username,
+            full_name: userData.fullName
           }
+        }
+      });
+
+      if (authError) {
+        console.error('Auth error:', authError);
+        return;
+      }
+
+      if (authData.user) {
+        // Create user profile
+        const profileData = {
+          user_id: authData.user.id,
+          username: userData.username,
+          full_name: userData.fullName,
+          email: userData.email,
+          user_type: userData.userType,
+          bio: '',
+          profile_photo: '',
+          cover_photo: '',
+          theme_preference: userData.theme || 'cosmic'
+        };
+
+        const { error: profileError } = await supabase
+          .from('user_profiles_ovi2024')
+          .insert([profileData]);
+
+        if (profileError) {
+          console.error('Profile creation error:', profileError);
+        }
+
+        setUser(authData.user);
+        await fetchUserProfile(authData.user.id);
+      }
+    } catch (error) {
+      console.error('Login error:', error);
+    }
+  };
+
+  const signIn = async (email, password) => {
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password
+      });
+
+      if (error) {
+        console.error('Sign in error:', error);
+        return { error };
+      }
+
+      return { data };
+    } catch (error) {
+      console.error('Sign in error:', error);
+      return { error };
+    }
+  };
+
+  const signOut = async () => {
+    try {
+      const { error } = await supabase.auth.signOut();
+      if (error) {
+        console.error('Sign out error:', error);
+      }
+      setUser(null);
+      setProfile(null);
+    } catch (error) {
+      console.error('Sign out error:', error);
+    }
+  };
+
+  const updateUser = async (updates) => {
+    if (!user || !profile) return;
+
+    try {
+      const { error } = await supabase
+        .from('user_profiles_ovi2024')
+        .update(updates)
+        .eq('user_id', user.id);
+
+      if (error) {
+        console.error('Update error:', error);
+        return;
+      }
+
+      setProfile(prev => ({ ...prev, ...updates }));
+
+      // Dispatch profile photo update event if photo was updated
+      if (updates.profile_photo) {
+        window.dispatchEvent(new CustomEvent('profilePhotoUpdated', {
+          detail: { profilePhoto: updates.profile_photo }
         }));
       }
-      
-      // Log the profile update action
-      await logUserAction('profile_updated', {
-        updated_fields: Object.keys(updatedUserData),
-        previous_values: Object.keys(updatedUserData).reduce((acc, key) => {
-          acc[key] = user[key];
-          return acc;
-        }, {}),
-        new_values: updatedUserData
-      });
-      
-      return true;
     } catch (error) {
-      console.error('Error updating user:', error);
-      return false;
+      console.error('Update error:', error);
     }
   };
 
-  // Log page navigation
-  const logPageNavigation = async (fromPage, toPage) => {
-    await logUserAction('page_navigation', {
-      from_page: fromPage,
-      to_page: toPage,
-      navigation_time: new Date().toISOString()
-    });
+  const logUserAction = async (actionType, actionData) => {
+    if (!user) return;
+
+    try {
+      await supabase
+        .from('user_analytics_ovi2024')
+        .insert([{
+          user_id: user.id,
+          action_type: actionType,
+          action_data: actionData
+        }]);
+    } catch (error) {
+      console.error('Error logging user action:', error);
+    }
   };
 
-  // Log interaction events
-  const logInteraction = async (interactionType, targetData = {}) => {
-    await logUserAction('user_interaction', {
-      interaction_type: interactionType,
-      target: targetData,
-      interaction_time: new Date().toISOString()
-    });
+  const value = {
+    user,
+    profile,
+    loading,
+    login,
+    signIn,
+    signOut,
+    updateUser,
+    logUserAction,
+    fetchUserProfile
   };
 
   return (
-    <AuthContext.Provider value={{
-      user,
-      isAuthenticated,
-      isFirstTime,
-      sessionId,
-      login,
-      logout,
-      updateUser,
-      logUserAction,
-      logPageNavigation,
-      logInteraction
-    }}>
+    <AuthContext.Provider value={value}>
       {children}
     </AuthContext.Provider>
   );

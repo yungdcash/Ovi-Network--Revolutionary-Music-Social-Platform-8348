@@ -2,13 +2,12 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useAuth } from '../../contexts/AuthContext';
-import { emailVerificationService } from '../../lib/supabase';
 import ThemeSelector from './ThemeSelector';
 import FloatingElements from '../3D/FloatingElements';
 import SafeIcon from '../../common/SafeIcon';
 import * as FiIcons from 'react-icons/fi';
 
-const { FiMusic, FiUsers, FiDollarSign, FiArrowRight, FiArrowLeft, FiCheck, FiEye, FiEyeOff, FiLock, FiShield, FiLogIn, FiMail, FiClock, FiRefreshCw } = FiIcons;
+const { FiMusic, FiUsers, FiDollarSign, FiArrowRight, FiArrowLeft, FiCheck, FiEye, FiEyeOff, FiLock, FiShield, FiLogIn } = FiIcons;
 
 const LoginSetup = () => {
   const { theme, changeTheme, completeSetup } = useTheme();
@@ -19,16 +18,7 @@ const LoginSetup = () => {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [showSignInPassword, setShowSignInPassword] = useState(false);
   const [isSigningIn, setIsSigningIn] = useState(false);
-  
-  // Email verification states
-  const [isEmailVerificationStep, setIsEmailVerificationStep] = useState(false);
-  const [verificationCode, setVerificationCode] = useState(['', '', '', '', '', '', '', '', '', '']);
-  const [isVerifying, setIsVerifying] = useState(false);
-  const [isSendingCode, setIsSendingCode] = useState(false);
-  const [verificationError, setVerificationError] = useState('');
-  const [verificationSuccess, setVerificationSuccess] = useState(false);
-  const [timeLeft, setTimeLeft] = useState(900); // 15 minutes in seconds
-  const [canResend, setCanResend] = useState(false);
+  const [isCreatingAccount, setIsCreatingAccount] = useState(false);
 
   const [formData, setFormData] = useState({
     username: '',
@@ -41,30 +31,6 @@ const LoginSetup = () => {
     email: '',
     password: ''
   });
-
-  // Timer effect for verification code expiry
-  React.useEffect(() => {
-    let interval;
-    if (isEmailVerificationStep && timeLeft > 0) {
-      interval = setInterval(() => {
-        setTimeLeft(prev => {
-          if (prev <= 1) {
-            setCanResend(true);
-            return 0;
-          }
-          return prev - 1;
-        });
-      }, 1000);
-    }
-    return () => clearInterval(interval);
-  }, [isEmailVerificationStep, timeLeft]);
-
-  // Format time for display
-  const formatTime = (seconds) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
-  };
 
   const handleThemeSelect = (selectedTheme) => {
     changeTheme(selectedTheme);
@@ -79,14 +45,7 @@ const LoginSetup = () => {
   };
 
   const handleBack = () => {
-    if (isEmailVerificationStep) {
-      setIsEmailVerificationStep(false);
-      setVerificationCode(['', '', '', '', '', '', '', '', '', '']);
-      setVerificationError('');
-      setVerificationSuccess(false);
-      setTimeLeft(900);
-      setCanResend(false);
-    } else if (isSigningIn) {
+    if (isSigningIn) {
       setIsSigningIn(false);
       setSignInData({ email: '', password: '' });
     } else {
@@ -201,101 +160,22 @@ const LoginSetup = () => {
   const isFormValid = formData.fullName && formData.username && formData.email && formData.password && formData.confirmPassword && passwordsMatch && passwordStrength >= 3;
   const isSignInValid = signInData.email && signInData.password;
 
-  // Email verification functions
-  const handleSendVerificationCode = async () => {
+  const handleComplete = async () => {
     if (!isFormValid) return;
     
-    setIsSendingCode(true);
-    setVerificationError('');
+    setIsCreatingAccount(true);
     
     try {
-      // Generate verification code
-      const code = emailVerificationService.generateVerificationCode();
-      
-      // Store code in database
-      const storeResult = await emailVerificationService.storeVerificationCode(formData.email, code);
-      if (!storeResult.success) {
-        throw new Error(storeResult.error);
-      }
-      
-      // Send verification email
-      const emailResult = await emailVerificationService.sendVerificationEmail(
-        formData.email, 
-        code, 
-        formData.fullName
-      );
-      
-      if (!emailResult.success) {
-        throw new Error(emailResult.error);
-      }
-      
-      // Move to verification step
-      setIsEmailVerificationStep(true);
-      setTimeLeft(900); // Reset timer
-      setCanResend(false);
-      
-    } catch (error) {
-      setVerificationError(error.message || 'Failed to send verification code');
-    } finally {
-      setIsSendingCode(false);
-    }
-  };
-
-  const handleVerificationCodeChange = (index, value) => {
-    if (value.length > 1) return; // Only allow single digit
-    
-    const newCode = [...verificationCode];
-    newCode[index] = value;
-    setVerificationCode(newCode);
-    
-    // Auto-focus next input
-    if (value && index < 9) {
-      const nextInput = document.getElementById(`code-input-${index + 1}`);
-      if (nextInput) nextInput.focus();
-    }
-  };
-
-  const handleVerificationCodeKeyDown = (index, e) => {
-    if (e.key === 'Backspace' && !verificationCode[index] && index > 0) {
-      const prevInput = document.getElementById(`code-input-${index - 1}`);
-      if (prevInput) prevInput.focus();
-    }
-  };
-
-  const handleVerifyCode = async () => {
-    const code = verificationCode.join('');
-    if (code.length !== 10) {
-      setVerificationError('Please enter the complete 10-digit code');
-      return;
-    }
-    
-    setIsVerifying(true);
-    setVerificationError('');
-    
-    try {
-      // Verify the code
-      const verifyResult = await emailVerificationService.verifyCode(formData.email, code);
-      
-      if (!verifyResult.success) {
-        throw new Error(verifyResult.error);
-      }
-      
-      // Create user account
+      // Create user account directly without email verification
       const userData = {
         email: formData.email,
         username: formData.username,
         fullName: formData.fullName,
         userType,
-        theme: theme.name
+        theme: theme.name,
+        joinDate: new Date().toISOString(),
+        emailVerified: false // No email verification required
       };
-      
-      const createResult = await emailVerificationService.createUserAccount(userData);
-      
-      if (!createResult.success) {
-        throw new Error(createResult.error);
-      }
-      
-      setVerificationSuccess(true);
       
       // Log successful sign-up
       await logUserAction('sign_up', {
@@ -304,16 +184,16 @@ const LoginSetup = () => {
         user_full_name: formData.fullName,
         user_type: userType,
         selected_theme: theme.name,
-        signup_method: 'email_password_verified',
+        signup_method: 'email_password',
         account_creation_timestamp: new Date().toISOString(),
-        email_verification_completed: true,
+        email_verification_completed: false,
         password_strength: passwordStrength,
         password_strength_text: passwordStrengthInfo.text,
         onboarding_completion: {
           theme_selection_completed: true,
           role_selection_completed: true,
           profile_creation_completed: true,
-          email_verification_completed: true,
+          email_verification_completed: false,
           setup_duration: Date.now()
         },
         user_preferences: {
@@ -334,58 +214,33 @@ const LoginSetup = () => {
           full_name_provided: !!formData.fullName,
           password_meets_requirements: passwordStrength >= 3,
           passwords_match: passwordsMatch,
-          email_verified: true
+          email_verified: false
         }
       });
       
-      // Complete signup after short delay
-      setTimeout(() => {
-        const completeUserData = {
-          ...formData,
-          userType,
-          theme: theme.name,
-          joinDate: new Date().toISOString(),
-          emailVerified: true
-        };
-        
-        login(completeUserData);
-        completeSetup();
-      }, 2000);
+      // Complete signup immediately
+      login(userData);
+      completeSetup();
       
     } catch (error) {
-      setVerificationError(error.message || 'Verification failed');
+      console.error('Error creating account:', error);
+      
+      // Still complete signup even if logging fails
+      const userData = {
+        email: formData.email,
+        username: formData.username,
+        fullName: formData.fullName,
+        userType,
+        theme: theme.name,
+        joinDate: new Date().toISOString(),
+        emailVerified: false
+      };
+      
+      login(userData);
+      completeSetup();
     } finally {
-      setIsVerifying(false);
+      setIsCreatingAccount(false);
     }
-  };
-
-  const handleResendCode = async () => {
-    setIsSendingCode(true);
-    setVerificationError('');
-    setVerificationCode(['', '', '', '', '', '', '', '', '', '']);
-    
-    try {
-      const result = await emailVerificationService.requestNewCode(formData.email);
-      
-      if (!result.success) {
-        throw new Error(result.error);
-      }
-      
-      setTimeLeft(900); // Reset timer
-      setCanResend(false);
-      
-    } catch (error) {
-      setVerificationError(error.message || 'Failed to resend code');
-    } finally {
-      setIsSendingCode(false);
-    }
-  };
-
-  const handleComplete = async () => {
-    if (!isFormValid) return;
-    
-    // Start email verification process
-    await handleSendVerificationCode();
   };
 
   const userTypes = [
@@ -702,7 +557,7 @@ const LoginSetup = () => {
               </motion.div>
             )}
 
-            {step === 4 && !isEmailVerificationStep && (
+            {step === 4 && (
               <motion.div
                 key="profile"
                 initial={{ opacity: 0, x: -50 }}
@@ -715,7 +570,7 @@ const LoginSetup = () => {
                     <SafeIcon icon={FiShield} className="w-8 h-8 text-white" />
                   </div>
                   <h2 className="text-3xl font-bold text-white mb-2">Create Your Profile</h2>
-                  <p className="text-smokey-400">Set up your secure Ovi Network account</p>
+                  <p className="text-smokey-400">Set up your Ovi Network account</p>
                 </div>
 
                 <div className="space-y-6">
@@ -878,17 +733,6 @@ const LoginSetup = () => {
                   </div>
                 </div>
 
-                {/* Error Display */}
-                {verificationError && (
-                  <motion.div
-                    initial={{ opacity: 0, y: -10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="p-4 bg-red-500 bg-opacity-20 border border-red-500 rounded-lg"
-                  >
-                    <p className="text-red-400 text-sm">{verificationError}</p>
-                  </motion.div>
-                )}
-
                 {/* Navigation Buttons */}
                 <div className="flex justify-between items-center space-x-4">
                   {/* Back Button */}
@@ -902,191 +746,29 @@ const LoginSetup = () => {
                     <span>Back</span>
                   </motion.button>
 
-                  {/* Complete Setup Button */}
+                  {/* Create Account Button */}
                   <motion.button
-                    whileHover={isFormValid && !isSendingCode ? { scale: 1.05 } : {}}
-                    whileTap={isFormValid && !isSendingCode ? { scale: 0.95 } : {}}
+                    whileHover={isFormValid && !isCreatingAccount ? { scale: 1.05 } : {}}
+                    whileTap={isFormValid && !isCreatingAccount ? { scale: 0.95 } : {}}
                     onClick={handleComplete}
-                    disabled={!isFormValid || isSendingCode}
+                    disabled={!isFormValid || isCreatingAccount}
                     className={`flex-1 px-8 py-4 bg-gradient-to-r ${theme.gradient} text-white font-semibold rounded-full shadow-lg hover:shadow-xl transition-all duration-300 ${
-                      !isFormValid || isSendingCode ? 'opacity-50 cursor-not-allowed' : ''
+                      !isFormValid || isCreatingAccount ? 'opacity-50 cursor-not-allowed' : ''
                     } flex items-center justify-center space-x-2`}
                   >
-                    {isSendingCode ? (
+                    {isCreatingAccount ? (
                       <>
-                        <SafeIcon icon={FiRefreshCw} className="w-5 h-5 animate-spin" />
-                        <span>Sending Code...</span>
+                        <SafeIcon icon={FiCheck} className="w-5 h-5 animate-pulse" />
+                        <span>Creating Account...</span>
                       </>
                     ) : (
                       <>
                         <span>Create Account</span>
-                        <SafeIcon icon={FiMail} className="w-5 h-5" />
+                        <SafeIcon icon={FiCheck} className="w-5 h-5" />
                       </>
                     )}
                   </motion.button>
                 </div>
-              </motion.div>
-            )}
-
-            {isEmailVerificationStep && (
-              <motion.div
-                key="email-verification"
-                initial={{ opacity: 0, x: -50 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: 50 }}
-                className="max-w-lg mx-auto space-y-8"
-              >
-                <div className="text-center">
-                  <motion.div
-                    initial={{ scale: 0 }}
-                    animate={{ scale: 1 }}
-                    transition={{ delay: 0.2 }}
-                    className={`inline-block p-3 rounded-full bg-gradient-to-br ${theme.gradient} mb-4`}
-                  >
-                    <SafeIcon icon={verificationSuccess ? FiCheck : FiMail} className="w-8 h-8 text-white" />
-                  </motion.div>
-                  
-                  {verificationSuccess ? (
-                    <div className="space-y-2">
-                      <h2 className="text-3xl font-bold text-white">Email Verified!</h2>
-                      <p className="text-smokey-400">Welcome to Ovi Network! Setting up your account...</p>
-                    </div>
-                  ) : (
-                    <div className="space-y-2">
-                      <h2 className="text-3xl font-bold text-white">Verify Your Email</h2>
-                      <p className="text-smokey-400">
-                        We've sent a 10-digit verification code to
-                      </p>
-                      <p className={`text-${theme.primary} font-semibold`}>{formData.email}</p>
-                    </div>
-                  )}
-                </div>
-
-                {!verificationSuccess && (
-                  <>
-                    {/* Verification Code Input */}
-                    <div className="space-y-4">
-                      <label className="block text-sm font-medium text-smokey-300 text-center">
-                        Enter Verification Code
-                      </label>
-                      
-                      <div className="flex justify-center space-x-2">
-                        {verificationCode.map((digit, index) => (
-                          <input
-                            key={index}
-                            id={`code-input-${index}`}
-                            type="text"
-                            maxLength="1"
-                            value={digit}
-                            onChange={(e) => handleVerificationCodeChange(index, e.target.value)}
-                            onKeyDown={(e) => handleVerificationCodeKeyDown(index, e)}
-                            className={`w-12 h-12 text-center text-xl font-bold bg-smokey-800 border border-smokey-700 rounded-lg text-white focus:outline-none focus:border-${theme.primary} transition-colors`}
-                          />
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Timer */}
-                    <div className="text-center">
-                      <div className="flex items-center justify-center space-x-2 text-smokey-400">
-                        <SafeIcon icon={FiClock} className="w-4 h-4" />
-                        <span className="text-sm">
-                          {timeLeft > 0 ? `Code expires in ${formatTime(timeLeft)}` : 'Code expired'}
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Error Display */}
-                    {verificationError && (
-                      <motion.div
-                        initial={{ opacity: 0, y: -10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        className="p-4 bg-red-500 bg-opacity-20 border border-red-500 rounded-lg"
-                      >
-                        <p className="text-red-400 text-sm text-center">{verificationError}</p>
-                      </motion.div>
-                    )}
-
-                    {/* Resend Code */}
-                    <div className="text-center">
-                      <p className="text-smokey-500 text-sm mb-2">Didn't receive the code?</p>
-                      <motion.button
-                        whileHover={canResend && !isSendingCode ? { scale: 1.05 } : {}}
-                        whileTap={canResend && !isSendingCode ? { scale: 0.95 } : {}}
-                        onClick={handleResendCode}
-                        disabled={!canResend || isSendingCode}
-                        className={`px-6 py-2 bg-smokey-800 hover:bg-smokey-700 text-white font-medium rounded-full transition-all duration-300 flex items-center space-x-2 mx-auto ${
-                          !canResend || isSendingCode ? 'opacity-50 cursor-not-allowed' : ''
-                        }`}
-                      >
-                        {isSendingCode ? (
-                          <>
-                            <SafeIcon icon={FiRefreshCw} className="w-4 h-4 animate-spin" />
-                            <span>Sending...</span>
-                          </>
-                        ) : (
-                          <>
-                            <SafeIcon icon={FiRefreshCw} className="w-4 h-4" />
-                            <span>Resend Code</span>
-                          </>
-                        )}
-                      </motion.button>
-                    </div>
-
-                    {/* Navigation Buttons */}
-                    <div className="flex justify-between items-center space-x-4">
-                      {/* Back Button */}
-                      <motion.button
-                        whileHover={{ scale: 1.05 }}
-                        whileTap={{ scale: 0.95 }}
-                        onClick={handleBack}
-                        className="px-6 py-3 bg-smokey-800 hover:bg-smokey-700 text-white font-semibold rounded-full shadow-lg hover:shadow-xl transition-all duration-300 flex items-center space-x-2 border border-smokey-600"
-                      >
-                        <SafeIcon icon={FiArrowLeft} className="w-5 h-5" />
-                        <span>Back</span>
-                      </motion.button>
-
-                      {/* Verify Button */}
-                      <motion.button
-                        whileHover={verificationCode.join('').length === 10 && !isVerifying ? { scale: 1.05 } : {}}
-                        whileTap={verificationCode.join('').length === 10 && !isVerifying ? { scale: 0.95 } : {}}
-                        onClick={handleVerifyCode}
-                        disabled={verificationCode.join('').length !== 10 || isVerifying}
-                        className={`flex-1 px-8 py-4 bg-gradient-to-r ${theme.gradient} text-white font-semibold rounded-full shadow-lg hover:shadow-xl transition-all duration-300 ${
-                          verificationCode.join('').length !== 10 || isVerifying ? 'opacity-50 cursor-not-allowed' : ''
-                        } flex items-center justify-center space-x-2`}
-                      >
-                        {isVerifying ? (
-                          <>
-                            <SafeIcon icon={FiRefreshCw} className="w-5 h-5 animate-spin" />
-                            <span>Verifying...</span>
-                          </>
-                        ) : (
-                          <>
-                            <span>Verify Email</span>
-                            <SafeIcon icon={FiCheck} className="w-5 h-5" />
-                          </>
-                        )}
-                      </motion.button>
-                    </div>
-                  </>
-                )}
-
-                {verificationSuccess && (
-                  <div className="text-center">
-                    <motion.div
-                      initial={{ scale: 0 }}
-                      animate={{ scale: 1 }}
-                      transition={{ delay: 0.5 }}
-                      className="w-16 h-16 bg-green-500 rounded-full flex items-center justify-center mx-auto mb-4"
-                    >
-                      <SafeIcon icon={FiCheck} className="w-8 h-8 text-white" />
-                    </motion.div>
-                    <p className="text-smokey-400">
-                      Redirecting you to your new account...
-                    </p>
-                  </div>
-                )}
               </motion.div>
             )}
           </AnimatePresence>
@@ -1104,11 +786,6 @@ const LoginSetup = () => {
               }`}
             />
           ))}
-          {isEmailVerificationStep && (
-            <div className={`w-3 h-3 rounded-full transition-all duration-300 ${
-              verificationSuccess ? `bg-${theme.primary}` : 'bg-yellow-500'
-            }`} />
-          )}
         </div>
       </div>
     </div>

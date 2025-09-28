@@ -1,337 +1,287 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useAuth } from '../../contexts/AuthContext';
 import SafeIcon from '../../common/SafeIcon';
 import FloatingElements from '../3D/FloatingElements';
+import { supabase } from '../../lib/supabase';
 import * as FiIcons from 'react-icons/fi';
 
-const { FiPlus, FiMusic, FiUpload, FiX, FiPlay, FiPause, FiDownload, FiShare2, FiHeart, FiEye } = FiIcons;
+const { FiMusic, FiUpload, FiPlay, FiPause, FiHeart, FiDownload, FiShare2, FiX, FiCheck, FiDollarSign, FiEye, FiTrendingUp } = FiIcons;
 
 const MusicPage = () => {
   const { theme } = useTheme();
-  const { user, logUserAction } = useAuth();
+  const { user, profile, logUserAction } = useAuth();
+  const [tracks, setTracks] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [showUploadModal, setShowUploadModal] = useState(false);
-  const [dragActive, setDragActive] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [isUploading, setIsUploading] = useState(false);
+  const [currentlyPlaying, setCurrentlyPlaying] = useState(null);
   const fileInputRef = useRef(null);
+  const audioRef = useRef(null);
 
-  // Mock user's tracks
-  const [userTracks] = useState([
-    {
-      id: 1,
-      title: 'Midnight Dreams',
-      duration: '3:45',
-      genre: 'Pop',
-      thumbnail: 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=400&h=400&fit=crop',
-      plays: 1247,
-      likes: 89,
-      shares: 23,
-      earnings: 156.78,
-      uploadDate: '2024-01-15'
-    },
-    {
-      id: 2,
-      title: 'Electric Vibes',
-      duration: '4:12',
-      genre: 'Electronic',
-      thumbnail: 'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=400&h=400&fit=crop',
-      plays: 892,
-      likes: 67,
-      shares: 34,
-      earnings: 234.50,
-      uploadDate: '2024-01-10'
+  const [uploadForm, setUploadForm] = useState({
+    title: '',
+    description: '',
+    genre: '',
+    tags: '',
+    price: '0.00',
+    isPremium: false,
+    file: null,
+    coverImage: null
+  });
+
+  useEffect(() => {
+    if (user) {
+      fetchTracks();
     }
-  ]);
+  }, [user]);
 
-  const handleUpload = async (formData) => {
+  const fetchTracks = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('music_tracks_ovi2024')
+        .select(`
+          *,
+          user_profiles_ovi2024 (
+            username,
+            full_name,
+            profile_photo
+          )
+        `)
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Error fetching tracks:', error);
+        return;
+      }
+
+      setTracks(data || []);
+    } catch (error) {
+      console.error('Error fetching tracks:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleUploadClick = () => {
+    setShowUploadModal(true);
+    logUserAction('music_upload_modal_opened', {
+      user_type: profile?.user_type,
+      timestamp: new Date().toISOString()
+    });
+  };
+
+  const handleFileSelect = (e) => {
+    const file = e.target.files[0];
+    if (file && file.type.startsWith('audio/')) {
+      setUploadForm(prev => ({ ...prev, file }));
+    }
+  };
+
+  const handleCoverImageSelect = (e) => {
+    const file = e.target.files[0];
+    if (file && file.type.startsWith('image/')) {
+      setUploadForm(prev => ({ ...prev, coverImage: file }));
+    }
+  };
+
+  const handleUpload = async () => {
+    if (!uploadForm.file || !uploadForm.title) return;
+
     setIsUploading(true);
     setUploadProgress(0);
 
-    // Simulate upload progress
-    const interval = setInterval(() => {
-      setUploadProgress(prev => {
-        if (prev >= 100) {
-          clearInterval(interval);
-          setIsUploading(false);
-          setShowUploadModal(false);
-          return 100;
-        }
-        return prev + 10;
-      });
-    }, 200);
-
     try {
-      await logUserAction('track_upload', {
-        track_title: formData.title,
-        genre: formData.genre,
-        description: formData.description
+      // Simulate upload progress
+      const progressInterval = setInterval(() => {
+        setUploadProgress(prev => {
+          if (prev >= 90) {
+            clearInterval(progressInterval);
+            return 90;
+          }
+          return prev + Math.random() * 15;
+        });
+      }, 200);
+
+      // In a real app, you would upload files to storage first
+      // For now, we'll use placeholder URLs
+      const fileUrl = `https://example.com/tracks/${Date.now()}.mp3`;
+      const coverImageUrl = uploadForm.coverImage ? `https://example.com/covers/${Date.now()}.jpg` : null;
+
+      const trackData = {
+        user_id: user.id,
+        title: uploadForm.title,
+        description: uploadForm.description,
+        file_url: fileUrl,
+        cover_image: coverImageUrl,
+        genre: uploadForm.genre,
+        tags: uploadForm.tags.split(',').map(tag => tag.trim()).filter(tag => tag),
+        price: parseFloat(uploadForm.price),
+        is_premium: uploadForm.isPremium
+      };
+
+      const { error } = await supabase
+        .from('music_tracks_ovi2024')
+        .insert([trackData]);
+
+      if (error) {
+        console.error('Error uploading track:', error);
+        return;
+      }
+
+      clearInterval(progressInterval);
+      setUploadProgress(100);
+
+      // Log upload action
+      await logUserAction('music_track_uploaded', {
+        track_title: uploadForm.title,
+        track_genre: uploadForm.genre,
+        track_price: uploadForm.price,
+        is_premium: uploadForm.isPremium,
+        user_type: profile?.user_type,
+        upload_timestamp: new Date().toISOString()
       });
+
+      setTimeout(() => {
+        setShowUploadModal(false);
+        setIsUploading(false);
+        setUploadProgress(0);
+        setUploadForm({
+          title: '',
+          description: '',
+          genre: '',
+          tags: '',
+          price: '0.00',
+          isPremium: false,
+          file: null,
+          coverImage: null
+        });
+        fetchTracks();
+      }, 1000);
+
     } catch (error) {
-      console.error('Error logging upload:', error);
+      console.error('Upload error:', error);
+      setIsUploading(false);
+      setUploadProgress(0);
     }
   };
 
-  const handleDrag = (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (e.type === 'dragenter' || e.type === 'dragover') {
-      setDragActive(true);
-    } else if (e.type === 'dragleave') {
-      setDragActive(false);
+  const handlePlay = (trackId) => {
+    if (currentlyPlaying === trackId) {
+      setCurrentlyPlaying(null);
+      if (audioRef.current) {
+        audioRef.current.pause();
+      }
+    } else {
+      setCurrentlyPlaying(trackId);
+      // In a real app, you would load and play the actual audio file
+      logUserAction('music_track_played', {
+        track_id: trackId,
+        user_type: profile?.user_type
+      });
     }
   };
 
-  const handleDrop = (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setDragActive(false);
-    
-    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      // Handle file upload
-      console.log('File dropped:', e.dataTransfer.files[0]);
+  const handleLike = async (trackId) => {
+    try {
+      // Check if already liked
+      const { data: existingLike } = await supabase
+        .from('likes_ovi2024')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('track_id', trackId)
+        .single();
+
+      if (existingLike) {
+        // Unlike
+        await supabase
+          .from('likes_ovi2024')
+          .delete()
+          .eq('id', existingLike.id);
+      } else {
+        // Like
+        await supabase
+          .from('likes_ovi2024')
+          .insert([{
+            user_id: user.id,
+            track_id: trackId
+          }]);
+      }
+
+      fetchTracks();
+    } catch (error) {
+      console.error('Error toggling like:', error);
     }
   };
 
-  const UploadModal = () => {
-    const [formData, setFormData] = useState({
-      title: '',
-      genre: '',
-      description: '',
-      file: null
-    });
-
+  if (loading) {
     return (
-      <AnimatePresence>
-        {showUploadModal && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4"
-            onClick={() => setShowUploadModal(false)}
-          >
-            <motion.div
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.9, opacity: 0 }}
-              className="bg-smokey-800 rounded-2xl p-6 max-w-lg w-full border border-smokey-700 max-h-[90vh] overflow-y-auto"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className="flex justify-between items-center mb-6">
-                <div className="flex items-center space-x-3">
-                  <div className={`w-12 h-12 rounded-full bg-gradient-to-r ${theme.gradient} flex items-center justify-center`}>
-                    <SafeIcon icon={FiMusic} className="w-6 h-6 text-white" />
-                  </div>
-                  <div>
-                    <h3 className="text-xl font-bold text-white">Upload Track</h3>
-                    <p className="text-smokey-400 text-sm">Share your music with the world</p>
-                  </div>
-                </div>
-                <button
-                  onClick={() => setShowUploadModal(false)}
-                  className="p-2 text-smokey-400 hover:text-white transition-colors"
-                >
-                  <SafeIcon icon={FiX} className="w-6 h-6" />
-                </button>
-              </div>
-
-              <form onSubmit={(e) => {
-                e.preventDefault();
-                handleUpload(formData);
-              }}>
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-white mb-2">
-                      Track Title *
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      value={formData.title}
-                      onChange={(e) => setFormData({...formData, title: e.target.value})}
-                      className="w-full px-4 py-3 bg-smokey-700 border border-smokey-600 rounded-lg text-white placeholder-smokey-400 focus:border-emerald-primary focus:outline-none"
-                      placeholder="Enter track title..."
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-white mb-2">Genre</label>
-                      <select
-                        value={formData.genre}
-                        onChange={(e) => setFormData({...formData, genre: e.target.value})}
-                        className="w-full px-4 py-3 bg-smokey-700 border border-smokey-600 rounded-lg text-white focus:border-emerald-primary focus:outline-none"
-                      >
-                        <option value="">Select Genre</option>
-                        <option value="pop">Pop</option>
-                        <option value="rock">Rock</option>
-                        <option value="hip-hop">Hip Hop</option>
-                        <option value="electronic">Electronic</option>
-                        <option value="r&b">R&B</option>
-                        <option value="country">Country</option>
-                        <option value="indie">Indie</option>
-                        <option value="jazz">Jazz</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-white mb-2">Mood</label>
-                      <select className="w-full px-4 py-3 bg-smokey-700 border border-smokey-600 rounded-lg text-white focus:border-emerald-primary focus:outline-none">
-                        <option value="">Select Mood</option>
-                        <option value="happy">Happy</option>
-                        <option value="sad">Sad</option>
-                        <option value="energetic">Energetic</option>
-                        <option value="chill">Chill</option>
-                        <option value="romantic">Romantic</option>
-                        <option value="aggressive">Aggressive</option>
-                      </select>
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-white mb-2">Description</label>
-                    <textarea
-                      rows="3"
-                      value={formData.description}
-                      onChange={(e) => setFormData({...formData, description: e.target.value})}
-                      className="w-full px-4 py-3 bg-smokey-700 border border-smokey-600 rounded-lg text-white placeholder-smokey-400 focus:border-emerald-primary focus:outline-none resize-none"
-                      placeholder="Tell your fans about this track..."
-                    />
-                  </div>
-
-                  {/* File Upload Area */}
-                  <div
-                    className={`border-2 border-dashed rounded-lg p-8 text-center transition-all ${
-                      dragActive 
-                        ? 'border-emerald-primary bg-emerald-primary/10' 
-                        : 'border-smokey-600 hover:border-smokey-500'
-                    }`}
-                    onDragEnter={handleDrag}
-                    onDragLeave={handleDrag}
-                    onDragOver={handleDrag}
-                    onDrop={handleDrop}
-                  >
-                    <SafeIcon icon={FiUpload} className="w-12 h-12 text-smokey-400 mx-auto mb-4" />
-                    <p className="text-white mb-2 font-medium">Drop your audio file here</p>
-                    <p className="text-smokey-400 text-sm mb-4">or click to browse</p>
-                    <input
-                      ref={fileInputRef}
-                      type="file"
-                      accept="audio/*"
-                      className="hidden"
-                      onChange={(e) => {
-                        if (e.target.files[0]) {
-                          setFormData({...formData, file: e.target.files[0]});
-                        }
-                      }}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => fileInputRef.current?.click()}
-                      className="px-4 py-2 bg-smokey-700 text-white rounded-lg hover:bg-smokey-600 transition-colors"
-                    >
-                      Choose File
-                    </button>
-                    <p className="text-xs text-smokey-500 mt-2">
-                      Supports MP3, WAV, FLAC (Max 100MB)
-                    </p>
-                    {formData.file && (
-                      <p className="text-emerald-400 text-sm mt-2">
-                        Selected: {formData.file.name}
-                      </p>
-                    )}
-                  </div>
-
-                  {/* Upload Progress */}
-                  {isUploading && (
-                    <div className="space-y-2">
-                      <div className="flex justify-between text-sm">
-                        <span className="text-white">Uploading...</span>
-                        <span className="text-emerald-400">{uploadProgress}%</span>
-                      </div>
-                      <div className="w-full bg-smokey-700 rounded-full h-2">
-                        <div
-                          className={`bg-gradient-to-r ${theme.gradient} h-2 rounded-full transition-all duration-300`}
-                          style={{ width: `${uploadProgress}%` }}
-                        />
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                <div className="flex space-x-3 mt-6">
-                  <button
-                    type="button"
-                    onClick={() => setShowUploadModal(false)}
-                    className="flex-1 py-3 px-4 bg-smokey-700 text-white rounded-lg hover:bg-smokey-600 transition-colors"
-                    disabled={isUploading}
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={!formData.title || !formData.file || isUploading}
-                    className={`flex-1 py-3 px-4 bg-gradient-to-r ${theme.gradient} text-white rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed`}
-                  >
-                    {isUploading ? 'Uploading...' : 'Upload Track'}
-                  </button>
-                </div>
-              </form>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      <div className="min-h-screen bg-gradient-to-br from-dark-900 via-smokey-900 to-dark-800 flex items-center justify-center">
+        <div className="text-center">
+          <div className={`animate-spin rounded-full h-12 w-12 border-b-2 border-${theme.primary} mx-auto mb-4`}></div>
+          <p className="text-smokey-300">Loading your music...</p>
+        </div>
+      </div>
     );
-  };
+  }
 
   return (
-    <div className="flex-1 relative">
-      <FloatingElements className="opacity-30" />
+    <div className="min-h-screen bg-gradient-to-br from-dark-900 via-smokey-900 to-dark-800 relative">
+      <FloatingElements />
       
-      <div className="relative z-10 max-w-6xl mx-auto p-6">
+      <div className="relative z-10 p-4 md:p-6 lg:p-8">
         {/* Header */}
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="text-center mb-8"
-        >
-          <h1 className="text-4xl font-bold text-white mb-3">Your Music</h1>
-          <p className="text-smokey-400 text-lg">
-            Manage and share your musical creations
-          </p>
-        </motion.div>
-
-        {/* Upload Button */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="flex justify-center mb-8"
-        >
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8">
+          <div>
+            <h1 className="text-4xl font-bold text-white mb-2">My Music</h1>
+            <p className="text-smokey-300">Share your musical creations with the world</p>
+          </div>
+          
           <motion.button
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
-            onClick={() => setShowUploadModal(true)}
-            className={`flex items-center space-x-3 px-8 py-4 bg-gradient-to-r ${theme.gradient} text-white rounded-2xl font-medium shadow-xl`}
+            onClick={handleUploadClick}
+            className={`mt-4 md:mt-0 px-6 py-3 bg-gradient-to-r ${theme.gradient} text-white font-semibold rounded-full shadow-lg hover:shadow-xl transition-all duration-300 flex items-center space-x-2`}
           >
-            <SafeIcon icon={FiPlus} className="w-6 h-6" />
-            <span className="text-lg">Upload New Track</span>
+            <SafeIcon icon={FiUpload} className="w-5 h-5" />
+            <span>Upload Track</span>
           </motion.button>
-        </motion.div>
+        </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="bg-smokey-800/50 backdrop-blur-sm rounded-2xl p-6 border border-smokey-700"
+          >
+            <div className="flex items-center space-x-3">
+              <div className={`p-3 rounded-full bg-gradient-to-r ${theme.gradient}`}>
+                <SafeIcon icon={FiMusic} className="w-6 h-6 text-white" />
+              </div>
+              <div>
+                <p className="text-smokey-300 text-sm">Total Tracks</p>
+                <p className="text-2xl font-bold text-white">{tracks.length}</p>
+              </div>
+            </div>
+          </motion.div>
+
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
-            className="bg-smokey-800/50 backdrop-blur-lg rounded-2xl p-6 border border-smokey-700"
+            className="bg-smokey-800/50 backdrop-blur-sm rounded-2xl p-6 border border-smokey-700"
           >
-            <div className="flex items-center space-x-3 mb-3">
-              <SafeIcon icon={FiPlay} className="w-8 h-8 text-emerald-400" />
+            <div className="flex items-center space-x-3">
+              <div className={`p-3 rounded-full bg-gradient-to-r ${theme.gradient}`}>
+                <SafeIcon icon={FiPlay} className="w-6 h-6 text-white" />
+              </div>
               <div>
-                <h3 className="text-white font-semibold">Total Plays</h3>
-                <p className="text-2xl font-bold text-emerald-400">2,139</p>
+                <p className="text-smokey-300 text-sm">Total Plays</p>
+                <p className="text-2xl font-bold text-white">{tracks.reduce((sum, track) => sum + track.plays_count, 0)}</p>
               </div>
             </div>
           </motion.div>
@@ -340,13 +290,15 @@ const MusicPage = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
-            className="bg-smokey-800/50 backdrop-blur-lg rounded-2xl p-6 border border-smokey-700"
+            className="bg-smokey-800/50 backdrop-blur-sm rounded-2xl p-6 border border-smokey-700"
           >
-            <div className="flex items-center space-x-3 mb-3">
-              <SafeIcon icon={FiHeart} className="w-8 h-8 text-red-400" />
+            <div className="flex items-center space-x-3">
+              <div className={`p-3 rounded-full bg-gradient-to-r ${theme.gradient}`}>
+                <SafeIcon icon={FiHeart} className="w-6 h-6 text-white" />
+              </div>
               <div>
-                <h3 className="text-white font-semibold">Total Likes</h3>
-                <p className="text-2xl font-bold text-red-400">156</p>
+                <p className="text-smokey-300 text-sm">Total Likes</p>
+                <p className="text-2xl font-bold text-white">{tracks.reduce((sum, track) => sum + track.likes_count, 0)}</p>
               </div>
             </div>
           </motion.div>
@@ -355,79 +307,278 @@ const MusicPage = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.3 }}
-            className="bg-smokey-800/50 backdrop-blur-lg rounded-2xl p-6 border border-smokey-700"
+            className="bg-smokey-800/50 backdrop-blur-sm rounded-2xl p-6 border border-smokey-700"
           >
-            <div className="flex items-center space-x-3 mb-3">
-              <SafeIcon icon={FiDownload} className="w-8 h-8 text-blue-400" />
+            <div className="flex items-center space-x-3">
+              <div className={`p-3 rounded-full bg-gradient-to-r ${theme.gradient}`}>
+                <SafeIcon icon={FiDollarSign} className="w-6 h-6 text-white" />
+              </div>
               <div>
-                <h3 className="text-white font-semibold">Earnings</h3>
-                <p className="text-2xl font-bold text-blue-400">$391.28</p>
+                <p className="text-smokey-300 text-sm">Revenue</p>
+                <p className="text-2xl font-bold text-white">${profile?.total_earnings?.toFixed(2) || '0.00'}</p>
               </div>
             </div>
           </motion.div>
         </div>
 
         {/* Tracks Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {userTracks.map((track, index) => (
-            <motion.div
-              key={track.id}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.1 }}
-              className="bg-smokey-800/50 backdrop-blur-lg rounded-2xl overflow-hidden border border-smokey-700 hover:border-smokey-600 transition-all group"
+        {tracks.length === 0 ? (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="text-center py-16"
+          >
+            <div className={`inline-block p-6 rounded-full bg-gradient-to-r ${theme.gradient} mb-6`}>
+              <SafeIcon icon={FiMusic} className="w-12 h-12 text-white" />
+            </div>
+            <h3 className="text-2xl font-bold text-white mb-4">No tracks uploaded yet</h3>
+            <p className="text-smokey-400 mb-8 max-w-md mx-auto">
+              Start sharing your music with the world. Upload your first track to get started.
+            </p>
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={handleUploadClick}
+              className={`px-8 py-4 bg-gradient-to-r ${theme.gradient} text-white font-semibold rounded-full shadow-lg hover:shadow-xl transition-all duration-300`}
             >
-              <div className="aspect-square relative">
-                <img
-                  src={track.thumbnail}
-                  alt={track.title}
-                  className="w-full h-full object-cover"
-                />
-                <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+              Upload Your First Track
+            </motion.button>
+          </motion.div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {tracks.map((track, index) => (
+              <motion.div
+                key={track.id}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: index * 0.1 }}
+                className="bg-smokey-800/50 backdrop-blur-sm rounded-2xl p-6 border border-smokey-700 hover:border-smokey-600 transition-all duration-300"
+              >
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-xl font-bold text-white truncate">{track.title}</h3>
                   <motion.button
                     whileHover={{ scale: 1.1 }}
                     whileTap={{ scale: 0.9 }}
-                    className={`w-16 h-16 rounded-full bg-gradient-to-r ${theme.gradient} flex items-center justify-center shadow-2xl`}
+                    onClick={() => handlePlay(track.id)}
+                    className={`p-3 rounded-full bg-gradient-to-r ${theme.gradient} text-white shadow-lg`}
                   >
-                    <SafeIcon icon={FiPlay} className="w-8 h-8 text-white ml-1" />
+                    <SafeIcon icon={currentlyPlaying === track.id ? FiPause : FiPlay} className="w-5 h-5" />
                   </motion.button>
                 </div>
-              </div>
 
-              <div className="p-4">
-                <h3 className="text-white font-semibold text-lg mb-1">{track.title}</h3>
-                <p className="text-smokey-400 text-sm mb-3">{track.genre} • {track.duration}</p>
+                {track.description && (
+                  <p className="text-smokey-300 text-sm mb-4 line-clamp-2">{track.description}</p>
+                )}
 
-                <div className="flex justify-between items-center text-sm text-smokey-400 mb-3">
-                  <span className="flex items-center space-x-1">
-                    <SafeIcon icon={FiEye} className="w-4 h-4" />
-                    <span>{track.plays}</span>
-                  </span>
-                  <span className="flex items-center space-x-1">
-                    <SafeIcon icon={FiHeart} className="w-4 h-4" />
-                    <span>{track.likes}</span>
-                  </span>
-                  <span className="flex items-center space-x-1">
-                    <SafeIcon icon={FiShare2} className="w-4 h-4" />
-                    <span>{track.shares}</span>
-                  </span>
+                <div className="flex items-center justify-between text-sm text-smokey-400 mb-4">
+                  <span>{track.genre}</span>
+                  {track.price > 0 && (
+                    <span className="text-green-400">${track.price}</span>
+                  )}
                 </div>
 
-                <div className="flex justify-between items-center">
-                  <span className={`text-${theme.primary} font-bold`}>
-                    ${track.earnings}
-                  </span>
-                  <span className="text-smokey-500 text-xs">
-                    {new Date(track.uploadDate).toLocaleDateString()}
-                  </span>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-4 text-sm text-smokey-400">
+                    <div className="flex items-center space-x-1">
+                      <SafeIcon icon={FiPlay} className="w-4 h-4" />
+                      <span>{track.plays_count}</span>
+                    </div>
+                    <div className="flex items-center space-x-1">
+                      <SafeIcon icon={FiHeart} className="w-4 h-4" />
+                      <span>{track.likes_count}</span>
+                    </div>
+                    <div className="flex items-center space-x-1">
+                      <SafeIcon icon={FiDownload} className="w-4 h-4" />
+                      <span>{track.downloads_count}</span>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center space-x-2">
+                    <motion.button
+                      whileHover={{ scale: 1.1 }}
+                      whileTap={{ scale: 0.9 }}
+                      onClick={() => handleLike(track.id)}
+                      className="p-2 rounded-full hover:bg-smokey-700 transition-colors"
+                    >
+                      <SafeIcon icon={FiHeart} className="w-4 h-4 text-smokey-400 hover:text-red-400" />
+                    </motion.button>
+                    <motion.button
+                      whileHover={{ scale: 1.1 }}
+                      whileTap={{ scale: 0.9 }}
+                      className="p-2 rounded-full hover:bg-smokey-700 transition-colors"
+                    >
+                      <SafeIcon icon={FiShare2} className="w-4 h-4 text-smokey-400 hover:text-white" />
+                    </motion.button>
+                  </div>
                 </div>
-              </div>
-            </motion.div>
-          ))}
-        </div>
+              </motion.div>
+            ))}
+          </div>
+        )}
       </div>
 
-      <UploadModal />
+      {/* Upload Modal */}
+      <AnimatePresence>
+        {showUploadModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-smokey-800 rounded-2xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto"
+            >
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-2xl font-bold text-white">Upload Track</h2>
+                <motion.button
+                  whileHover={{ scale: 1.1 }}
+                  whileTap={{ scale: 0.9 }}
+                  onClick={() => setShowUploadModal(false)}
+                  className="p-2 rounded-full hover:bg-smokey-700 transition-colors"
+                >
+                  <SafeIcon icon={FiX} className="w-6 h-6 text-smokey-400" />
+                </motion.button>
+              </div>
+
+              {isUploading ? (
+                <div className="text-center py-12">
+                  <div className={`inline-block p-6 rounded-full bg-gradient-to-r ${theme.gradient} mb-6`}>
+                    <SafeIcon icon={FiUpload} className="w-12 h-12 text-white" />
+                  </div>
+                  <h3 className="text-xl font-bold text-white mb-4">Uploading Track...</h3>
+                  <div className="w-full bg-smokey-700 rounded-full h-3 mb-4">
+                    <div 
+                      className={`h-3 bg-gradient-to-r ${theme.gradient} rounded-full transition-all duration-300`}
+                      style={{ width: `${uploadProgress}%` }}
+                    />
+                  </div>
+                  <p className="text-smokey-300">{Math.round(uploadProgress)}% complete</p>
+                </div>
+              ) : (
+                <div className="space-y-6">
+                  <div>
+                    <label className="block text-sm font-medium text-smokey-300 mb-2">Audio File</label>
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="audio/*"
+                      onChange={handleFileSelect}
+                      className="hidden"
+                    />
+                    <motion.button
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      onClick={() => fileInputRef.current?.click()}
+                      className="w-full p-4 border-2 border-dashed border-smokey-600 rounded-lg text-smokey-300 hover:border-smokey-500 transition-colors"
+                    >
+                      {uploadForm.file ? uploadForm.file.name : 'Click to select audio file'}
+                    </motion.button>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                      <label className="block text-sm font-medium text-smokey-300 mb-2">Title</label>
+                      <input
+                        type="text"
+                        value={uploadForm.title}
+                        onChange={(e) => setUploadForm(prev => ({ ...prev, title: e.target.value }))}
+                        className="w-full px-4 py-3 bg-smokey-700 border border-smokey-600 rounded-lg text-white placeholder-smokey-400 focus:outline-none focus:border-purple-500"
+                        placeholder="Enter track title"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-smokey-300 mb-2">Genre</label>
+                      <input
+                        type="text"
+                        value={uploadForm.genre}
+                        onChange={(e) => setUploadForm(prev => ({ ...prev, genre: e.target.value }))}
+                        className="w-full px-4 py-3 bg-smokey-700 border border-smokey-600 rounded-lg text-white placeholder-smokey-400 focus:outline-none focus:border-purple-500"
+                        placeholder="e.g., Hip Hop, R&B, Pop"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-smokey-300 mb-2">Description</label>
+                    <textarea
+                      value={uploadForm.description}
+                      onChange={(e) => setUploadForm(prev => ({ ...prev, description: e.target.value }))}
+                      rows={3}
+                      className="w-full px-4 py-3 bg-smokey-700 border border-smokey-600 rounded-lg text-white placeholder-smokey-400 focus:outline-none focus:border-purple-500"
+                      placeholder="Describe your track..."
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                      <label className="block text-sm font-medium text-smokey-300 mb-2">Tags</label>
+                      <input
+                        type="text"
+                        value={uploadForm.tags}
+                        onChange={(e) => setUploadForm(prev => ({ ...prev, tags: e.target.value }))}
+                        className="w-full px-4 py-3 bg-smokey-700 border border-smokey-600 rounded-lg text-white placeholder-smokey-400 focus:outline-none focus:border-purple-500"
+                        placeholder="tag1, tag2, tag3"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-smokey-300 mb-2">Price ($)</label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        value={uploadForm.price}
+                        onChange={(e) => setUploadForm(prev => ({ ...prev, price: e.target.value }))}
+                        className="w-full px-4 py-3 bg-smokey-700 border border-smokey-600 rounded-lg text-white placeholder-smokey-400 focus:outline-none focus:border-purple-500"
+                        placeholder="0.00"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex items-center space-x-3">
+                    <input
+                      type="checkbox"
+                      id="premium"
+                      checked={uploadForm.isPremium}
+                      onChange={(e) => setUploadForm(prev => ({ ...prev, isPremium: e.target.checked }))}
+                      className="rounded border-smokey-600 text-purple-500"
+                    />
+                    <label htmlFor="premium" className="text-smokey-300">Premium track (requires subscription)</label>
+                  </div>
+
+                  <div className="flex justify-end space-x-4 pt-6">
+                    <motion.button
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                      onClick={() => setShowUploadModal(false)}
+                      className="px-6 py-3 bg-smokey-700 hover:bg-smokey-600 text-white font-semibold rounded-full transition-colors"
+                    >
+                      Cancel
+                    </motion.button>
+                    <motion.button
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                      onClick={handleUpload}
+                      disabled={!uploadForm.file || !uploadForm.title}
+                      className={`px-6 py-3 bg-gradient-to-r ${theme.gradient} text-white font-semibold rounded-full ${
+                        !uploadForm.file || !uploadForm.title ? 'opacity-50 cursor-not-allowed' : ''
+                      }`}
+                    >
+                      Upload Track
+                    </motion.button>
+                  </div>
+                </div>
+              )}
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <audio ref={audioRef} />
     </div>
   );
 };

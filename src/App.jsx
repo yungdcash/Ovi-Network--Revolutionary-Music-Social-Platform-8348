@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { HashRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ThemeProvider, useTheme } from './contexts/ThemeContext';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
@@ -38,9 +39,9 @@ const AppContent = () => {
       case 'beats':
         return user?.userType === 'producer' ? <BeatsPage /> : <FeedPage />;
       case 'discover':
-        return <DiscoverPage />; // Available for all user roles
+        return <DiscoverPage />;
       case 'messages':
-        return <MessagingPage />; // New messaging page for all user roles
+        return <MessagingPage />;
       case 'profile':
         return <ProfilePage />;
       case 'settings':
@@ -107,11 +108,16 @@ const AppContent = () => {
 
 function App() {
   return (
-    <ThemeProvider>
-      <AuthProvider>
-        <AppContent />
-      </AuthProvider>
-    </ThemeProvider>
+    <Router>
+      <ThemeProvider>
+        <AuthProvider>
+          <Routes>
+            <Route path="/" element={<AppContent />} />
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </AuthProvider>
+      </ThemeProvider>
+    </Router>
   );
 }
 
