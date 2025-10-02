@@ -32,6 +32,11 @@ export default {
         'tangerine-secondary': '#c2410c',
         'tangerine-accent': '#fed7aa',
         
+        // Lemon Theme
+        'lemon-primary': '#eab308',
+        'lemon-secondary': '#ca8a04',
+        'lemon-accent': '#fde047',
+        
         // Dark Base Colors
         'dark': {
           900: '#0f0f0f',

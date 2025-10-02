@@ -50,34 +50,32 @@ export const themes = {
     accent: 'tangerine-accent',
     gradient: 'from-tangerine-primary to-tangerine-secondary',
     glowColor: '#ea580c'
+  },
+  lemon: {
+    name: 'Lemon',
+    primary: 'lemon-primary',
+    secondary: 'lemon-secondary',
+    accent: 'lemon-accent',
+    gradient: 'from-lemon-primary to-lemon-secondary',
+    glowColor: '#eab308'
   }
 };
 
 export const ThemeProvider = ({ children }) => {
   const [currentTheme, setCurrentTheme] = useState('emerald');
-  const [isFirstTime, setIsFirstTime] = useState(true);
 
   useEffect(() => {
     const savedTheme = localStorage.getItem('ovi-theme');
-    const isReturningUser = localStorage.getItem('ovi-user-setup');
-    
-    if (savedTheme) {
+    if (savedTheme && themes[savedTheme]) {
       setCurrentTheme(savedTheme);
-    }
-    
-    if (isReturningUser) {
-      setIsFirstTime(false);
     }
   }, []);
 
   const changeTheme = (theme) => {
-    setCurrentTheme(theme);
-    localStorage.setItem('ovi-theme', theme);
-  };
-
-  const completeSetup = () => {
-    setIsFirstTime(false);
-    localStorage.setItem('ovi-user-setup', 'true');
+    if (themes[theme]) {
+      setCurrentTheme(theme);
+      localStorage.setItem('ovi-theme', theme);
+    }
   };
 
   const theme = themes[currentTheme];
@@ -87,9 +85,7 @@ export const ThemeProvider = ({ children }) => {
       currentTheme,
       theme,
       themes,
-      changeTheme,
-      isFirstTime,
-      completeSetup
+      changeTheme
     }}>
       {children}
     </ThemeContext.Provider>

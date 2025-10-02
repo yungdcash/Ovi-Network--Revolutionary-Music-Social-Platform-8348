@@ -1,41 +1,20 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useTheme } from '../../contexts/ThemeContext';
-import { useAuth } from '../../contexts/AuthContext';
 import SafeIcon from '../../common/SafeIcon';
 import * as FiIcons from 'react-icons/fi';
 
-const { FiHome, FiSearch, FiMusic, FiUser, FiMessageCircle, FiTrendingUp, FiSettings, FiMenu, FiX, FiDisc, FiHeadphones } = FiIcons;
+const { FiHome, FiSearch, FiMusic, FiUser, FiHeart, FiMessageCircle, FiTrendingUp, FiSettings, FiMenu, FiX } = FiIcons;
 
 const Navigation = ({ activeTab, setActiveTab, isMobile = false }) => {
   const { theme } = useTheme();
-  const { user } = useAuth();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
-  // Base navigation items for all users
-  const baseNavItems = [
-    { id: 'home', icon: FiHome, label: 'Home' },
-    { id: 'discover', icon: FiHeadphones, label: 'Discover' }, // Now available for all roles
-    { id: 'trending', icon: FiTrendingUp, label: 'Trending' },
-  ];
-
-  // Role-specific navigation items
-  const getRoleSpecificItems = () => {
-    const items = [];
-    
-    if (user?.userType === 'artist') {
-      items.push({ id: 'music', icon: FiMusic, label: 'Music' });
-    } else if (user?.userType === 'producer') {
-      items.push({ id: 'beats', icon: FiDisc, label: 'Beats' });
-    }
-    
-    return items;
-  };
-
-  // Complete navigation items
   const navItems = [
-    ...baseNavItems,
-    ...getRoleSpecificItems(),
+    { id: 'home', icon: FiHome, label: 'Home' },
+    { id: 'search', icon: FiSearch, label: 'Search' },
+    { id: 'trending', icon: FiTrendingUp, label: 'Trending' },
+    { id: 'music', icon: FiMusic, label: 'Music' },
     { id: 'messages', icon: FiMessageCircle, label: 'Messages' },
     { id: 'profile', icon: FiUser, label: 'Profile' },
   ];
@@ -145,21 +124,6 @@ const Navigation = ({ activeTab, setActiveTab, isMobile = false }) => {
           <span className="text-2xl font-bold text-white">Ovi Network</span>
         </motion.div>
       </div>
-
-      {/* User Role Badge */}
-      {user?.userType && (
-        <div className="mb-6">
-          <div className={`px-3 py-2 rounded-lg text-center ${
-            user.userType === 'artist' 
-              ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
-              : user.userType === 'producer'
-              ? 'bg-purple-500/20 text-purple-300 border border-purple-500/30'
-              : 'bg-blue-500/20 text-blue-300 border border-blue-500/30'
-          }`}>
-            <span className="text-sm font-medium capitalize">{user.userType}</span>
-          </div>
-        </div>
-      )}
 
       {/* Navigation Items */}
       <nav className="flex-1 space-y-2">

@@ -10,26 +10,8 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src')
     }
   },
-  build: {
+   build: {
     outDir: 'dist',
-    sourcemap: true,
-    rollupOptions: {
-      external: [],
-      output: {
-        manualChunks: {
-          vendor: ['react', 'react-dom'],
-          motion: ['framer-motion'],
-          icons: ['react-icons']
-        }
-      }
-    }
+    sourcemap: true
   },
-  server: {
-    port: 3000,
-    open: true
-  },
-  preview: {
-    port: 4173,
-    open: true
-  }
 });
